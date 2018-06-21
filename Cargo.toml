@@ -3,5 +3,13 @@ name = "rusty-butler"
 version = "0.1.0"
 authors = ["Ward Muylaert <ward.muylaert@gmail.com>"]
 
+[lib]
+name = "rusty_butler_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rusty-butler-bin"
+path = "src/main.rs"
+
 [dependencies]
 irc = "0.13.5"
