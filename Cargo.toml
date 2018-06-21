@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Ward Muylaert <ward.muylaert@gmail.com>"]
 
 [dependencies]
+irc = "0.13.5"
