@@ -1,10 +1,11 @@
 extern crate irc;
+extern crate chrono;
 
 pub mod plugins {
     use irc::client::prelude::*;
 
     pub fn print_msg(msg: &Message) {
-        println!("{}", msg);
+        print!("{}", msg);
     }
 
     pub fn beep_boop(client: &IrcClient, msg: &Message) {
@@ -15,4 +16,6 @@ pub mod plugins {
             }
         }
     }
+
+    pub mod time;
 }

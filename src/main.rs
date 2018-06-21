@@ -13,6 +13,7 @@ fn main() {
     reactor.register_client_with_handler(client, |client, irc_msg| {
         plugins::print_msg(&irc_msg);
         plugins::beep_boop(client, &irc_msg);
+        plugins::time::handler(client, &irc_msg);
         Ok(())
     });
     reactor.run().unwrap();
