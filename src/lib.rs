@@ -1,5 +1,6 @@
-extern crate irc;
 extern crate chrono;
+extern crate irc;
+extern crate regex;
 
 pub mod plugins {
     use irc::client::prelude::*;
@@ -18,4 +19,6 @@ pub mod plugins {
     }
 
     pub mod time;
+
+    pub mod strava;
 }
