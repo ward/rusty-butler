@@ -1,6 +1,10 @@
 extern crate chrono;
 extern crate irc;
 extern crate regex;
+extern crate reqwest;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 
 pub mod plugins {
     use irc::client::prelude::*;
