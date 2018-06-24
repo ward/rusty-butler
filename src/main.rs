@@ -15,6 +15,7 @@ fn main() {
         plugins::print_msg(&irc_msg);
         plugins::beep_boop(client, &irc_msg);
         plugins::time::handler(client, &irc_msg);
+        plugins::strava::handler(client, &irc_msg);
         Ok(())
     });
     reactor.run().expect("Failed to run IrcReactor");
