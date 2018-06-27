@@ -14,6 +14,11 @@ pub fn handler(client: &IrcClient, msg: &Message, config: &Config) {
             Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
             _ => (),
         }
+        let activity_reply = handle_activities(message);
+        match activity_reply {
+            Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
+            _ => (),
+        }
     }
 }
 
@@ -22,6 +27,49 @@ pub fn get_access_token(config: &Config) -> Option<&String> {
     match options {
         Some(hm) => hm.get("strava_access_token"),
         None => None
+    }
+}
+
+fn handle_activities(msg: &str) -> Option<String> {
+    let activity_regex = Regex::new(r"https?:\/\/www\.strava\.com\/activities\/(\d+)").unwrap();
+    for captures in activity_regex.captures_iter(msg) {
+        let activity = Activity::fetch(captures.get(1).unwrap().as_str());
+        return match activity {
+            Ok(activity) => Some(activity.to_string()),
+            Err(e) => {
+                println!("{}", e);
+                None
+            }
+        }
+    }
+    None
+}
+
+#[derive(Deserialize, Debug)]
+struct Activity {
+    name: String,
+    #[serde(rename = "type")]
+    sport: String,
+    distance: f64,
+    total_elevation_gain: f64,
+    moving_time: u32,
+}
+impl Activity {
+    fn fetch(id: &str) -> Result<Activity, reqwest::Error> {
+        let strava_token = "";
+        let url = format!("https://www.strava.com/api/v3/activities/{}?access_token={}", id, strava_token);
+        let mut req = reqwest::get(&url)?;
+        println!("{}", req.url());
+        req.json()
+    }
+}
+impl ToString for Activity {
+    fn to_string(&self) -> String {
+        let distance = (self.distance / 100.0).floor() / 10.0;
+        format!("[STRAVA {sport}] \"{name}\", {distance} km (↑",
+                sport = self.sport.to_uppercase(),
+                name = self.name,
+                distance = distance)
     }
 }
 
