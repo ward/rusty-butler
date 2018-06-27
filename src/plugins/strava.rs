@@ -2,13 +2,26 @@ use irc::client::prelude::*;
 use regex::Regex;
 use reqwest;
 
-pub fn handler(client: &IrcClient, msg: &Message) {
+pub fn handler(client: &IrcClient, msg: &Message, config: &Config) {
+    // TODO Lots of needless checks every time. How to avoid?
+    let access_token = get_access_token(config);
+    if access_token.is_none() {
+        return ()
+    }
     if let Command::PRIVMSG(ref channel, ref message) = msg.command {
         let segment_reply = handle_segments(message);
         match segment_reply {
             Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
             _ => (),
         }
+    }
+}
+
+pub fn get_access_token(config: &Config) -> Option<&String> {
+    let options = &config.options;
+    match options {
+        Some(hm) => hm.get("strava_access_token"),
+        None => None
     }
 }
 

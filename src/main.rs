@@ -11,11 +11,14 @@ fn main() {
         .prepare_client_and_connect(&config)
         .expect("Failed to create client");
     client.identify().expect("Failed to identify");
-    reactor.register_client_with_handler(client, |client, irc_msg| {
+    // Note: because of the move there, the register_client_with_handler takes
+    // ownership of `config` so we cannot use it afterwards anymore!
+    // Don't think we care to use it again (for now) anyway.
+    reactor.register_client_with_handler(client, move |client, irc_msg| {
         plugins::print_msg(&irc_msg);
         plugins::beep_boop(client, &irc_msg);
         plugins::time::handler(client, &irc_msg);
-        plugins::strava::handler(client, &irc_msg);
+        plugins::strava::handler(client, &irc_msg, &config);
         Ok(())
     });
     reactor.run().expect("Failed to run IrcReactor");
