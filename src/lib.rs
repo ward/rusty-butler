@@ -5,6 +5,8 @@ extern crate reqwest;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+// Calculations
+extern crate rink;
 
 pub mod plugins {
     use irc::client::prelude::*;
@@ -25,4 +27,6 @@ pub mod plugins {
     pub mod time;
 
     pub mod strava;
+
+    pub mod calc;
 }

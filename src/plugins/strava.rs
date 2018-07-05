@@ -147,19 +147,19 @@ fn format_time(seconds: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    //use super::*;
 
-    #[test]
-    fn stuff() {
-        let s = handle_segments("https://www.strava.com/segments/13874540?filter=overall");
-        //let s = handle_segments("https://www.strava.com/segments/8750847?filter=overall");
-        //let s = handle_segments("https://www.strava.com/segments/12609639?filter=overall");
-        //let s = handle_segments("https://www.strava.com/segments/14630434?filter=overall");
-
-        match s {
-            Some(segment_id) => println!("{}", segment_id),
-            None => (),
-        }
-        panic!("Stop!");
-    }
+//    #[test]
+//    fn stuff() {
+//        let s: Option<i64> = None;
+//        //let s = handle_segments("https://www.strava.com/segments/13874540?filter=overall");
+//        //let s = handle_segments("https://www.strava.com/segments/8750847?filter=overall");
+//        //let s = handle_segments("https://www.strava.com/segments/12609639?filter=overall");
+//        //let s = handle_segments("https://www.strava.com/segments/14630434?filter=overall");
+//
+//        match s {
+//            Some(segment_id) => println!("{}", segment_id),
+//            None => (),
+//        }
+//    }
 }
