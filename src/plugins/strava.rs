@@ -1,15 +1,15 @@
 use irc::client::prelude::*;
 use regex::Regex;
 use reqwest;
-use std::str::FromStr;
 use std::error;
 use std::fmt;
+use std::str::FromStr;
 
 pub fn handler(client: &IrcClient, msg: &Message, config: &Config) {
     // TODO Lots of needless checks every time. How to avoid?
     let access_token = get_access_token(config);
     if access_token.is_none() {
-        return ()
+        return ();
     }
     let access_token = access_token.unwrap();
     if let Command::PRIVMSG(ref channel, ref message) = msg.command {
@@ -37,13 +37,12 @@ pub fn get_access_token(config: &Config) -> Option<&String> {
     let options = &config.options;
     match options {
         Some(hm) => hm.get("strava_access_token"),
-        None => None
+        None => None,
     }
 }
 
 fn match_club(msg: &str) -> bool {
-    msg.len() >= 7 &&
-        msg[..7].eq_ignore_ascii_case("!strava")
+    msg.len() >= 7 && msg[..7].eq_ignore_ascii_case("!strava")
 }
 fn handle_club(msg: &str, access_token: &str) -> Vec<String> {
     let mut result = vec![];
@@ -53,9 +52,11 @@ fn handle_club(msg: &str, access_token: &str) -> Vec<String> {
     let club = Club::fetch(club_id, access_token);
     let leaderboard = ClubLeaderboard::fetch(club_id, access_token);
     match club {
-        Ok(club) => result.push(format!("{club} https://www.strava.com/clubs/{club_id}",
-                                        club = club.to_string(),
-                                        club_id = club_id)),
+        Ok(club) => result.push(format!(
+            "{club} https://www.strava.com/clubs/{club_id}",
+            club = club.to_string(),
+            club_id = club_id
+        )),
         Err(e) => eprintln!("{}", e),
     }
     match leaderboard {
@@ -70,7 +71,7 @@ fn handle_club(msg: &str, access_token: &str) -> Vec<String> {
     }
     result
 }
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 struct Club {
     name: String,
     sport_type: String,
@@ -78,7 +79,10 @@ struct Club {
 }
 impl Club {
     fn fetch(id: &str, access_token: &str) -> Result<Club, reqwest::Error> {
-        let url = format!("https://www.strava.com/api/v3/clubs/{}?access_token={}", id, access_token);
+        let url = format!(
+            "https://www.strava.com/api/v3/clubs/{}?access_token={}",
+            id, access_token
+        );
         let mut req = reqwest::get(&url)?;
         println!("{}", req.url());
         req.json()
@@ -86,14 +90,16 @@ impl Club {
 }
 impl ToString for Club {
     fn to_string(&self) -> String {
-        format!("[STRAVA CLUB] {name}, a {sport_type} club with {member_count} members.",
-                name = self.name,
-                sport_type = self.sport_type,
-                member_count = self.member_count)
+        format!(
+            "[STRAVA CLUB] {name}, a {sport_type} club with {member_count} members.",
+            name = self.name,
+            sport_type = self.sport_type,
+            member_count = self.member_count
+        )
     }
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 struct ClubLeaderboard {
     #[serde(rename = "data")]
     ranking: Vec<ClubLeaderboardAthlete>,
@@ -109,50 +115,55 @@ impl ClubLeaderboard {
         let client = reqwest::Client::new();
         let mut headers = reqwest::header::Headers::new();
         let accept = reqwest::header::Accept(vec![
-                                             qitem(reqwest::mime::TEXT_JAVASCRIPT),
-                                             qitem(reqwest::mime::APPLICATION_JAVASCRIPT),
-                                             qitem("application/ecmascript".parse().unwrap()),
-                                             qitem("application/x-ecmascript".parse().unwrap()),
+            qitem(reqwest::mime::TEXT_JAVASCRIPT),
+            qitem(reqwest::mime::APPLICATION_JAVASCRIPT),
+            qitem("application/ecmascript".parse().unwrap()),
+            qitem("application/x-ecmascript".parse().unwrap()),
         ]);
         headers.set(accept);
         headers.set_raw("X-Requested-With", "XmlHttpRequest");
-        let mut req = client.get(&url)
-            .headers(headers)
-            .send()?;
+        let mut req = client.get(&url).headers(headers).send()?;
         println!("{}", req.url());
         //println!("{}", req.text().unwrap());
         req.json()
     }
     fn sort(&mut self, sort_by: ClubLeaderboardSort) {
-        if sort_by == self.sorted_by { return }
+        if sort_by == self.sorted_by {
+            return;
+        }
         match sort_by {
             ClubLeaderboardSort::Distance => {
                 self.ranking.sort_unstable_by_key(|a| -a.distance as i64)
-            },
+            }
             ClubLeaderboardSort::Elevation => {
                 self.ranking.sort_unstable_by_key(|a| -a.elev_gain as i64)
-            },
-            ClubLeaderboardSort::Moving => {
-                self.ranking.sort_unstable_by_key(|a| -(a.moving_time as i64))
-            },
-            ClubLeaderboardSort::Pace => {
-                self.ranking.sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64)
-            },
+            }
+            ClubLeaderboardSort::Moving => self.ranking
+                .sort_unstable_by_key(|a| -(a.moving_time as i64)),
+            ClubLeaderboardSort::Pace => self.ranking
+                .sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64),
         }
     }
 }
 impl ToString for ClubLeaderboard {
     fn to_string(&self) -> String {
-        let ranking = self.ranking.iter()
+        let ranking = self.ranking
+            .iter()
             .take(10)
             .enumerate()
-            .map(|(idx, athlete)| format!("{idx}. {athlete}", idx = idx+1, athlete = athlete.to_string()))
+            .map(|(idx, athlete)| {
+                format!(
+                    "{idx}. {athlete}",
+                    idx = idx + 1,
+                    athlete = athlete.to_string()
+                )
+            })
             .fold("".to_string(), |acc, ele| format!("{} {}", acc, ele));
         // Space too many at the start so we use it here instead
         format!("[STRAVA CLUB]{ranking}", ranking = ranking)
     }
 }
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 struct ClubLeaderboardAthlete {
     #[serde(rename = "athlete_firstname")]
     first_name: String,
@@ -171,15 +182,17 @@ impl ToString for ClubLeaderboardAthlete {
         let hours = (self.moving_time as f64 / 3600.0) as u32;
         let minutes = ((self.moving_time as f64 % 3600.0) / 60.0) as u32;
         let moving_time = format!("{}h{:02}", hours, minutes);
-        format!("{first_name} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
-                first_name = self.first_name,
-                distance = distance,
-                moving_time = moving_time,
-                pace = format_time(pace),
-                elev_gain = elev_gain)
+        format!(
+            "{first_name} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
+            first_name = self.first_name,
+            distance = distance,
+            moving_time = moving_time,
+            pace = format_time(pace),
+            elev_gain = elev_gain
+        )
     }
 }
-#[derive(Debug,Deserialize,PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 enum ClubLeaderboardSort {
     Elevation,
     Distance,
@@ -196,7 +209,9 @@ impl FromStr for ClubLeaderboardSort {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "elev" | "elevation" | "vertical" | "climb" | "climbing" => Ok(ClubLeaderboardSort::Elevation),
+            "elev" | "elevation" | "vertical" | "climb" | "climbing" => {
+                Ok(ClubLeaderboardSort::Elevation)
+            }
             "distance" | "dist" | "length" | "len" => Ok(ClubLeaderboardSort::Distance),
             "moving" | "time" | "duration" => Ok(ClubLeaderboardSort::Moving),
             "pace" | "speed" | "velocity" => Ok(ClubLeaderboardSort::Pace),
@@ -204,7 +219,7 @@ impl FromStr for ClubLeaderboardSort {
         }
     }
 }
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct ParseClubLeaderboardSortError;
 impl error::Error for ParseClubLeaderboardSortError {
     fn description(&self) -> &str {
@@ -232,7 +247,7 @@ fn handle_activities(msg: &str, access_token: &str) -> Option<String> {
                 eprintln!("{}", e);
                 None
             }
-        }
+        };
     }
     None
 }
@@ -248,7 +263,10 @@ struct Activity {
 }
 impl Activity {
     fn fetch(id: &str, access_token: &str) -> Result<Activity, reqwest::Error> {
-        let url = format!("https://www.strava.com/api/v3/activities/{}?access_token={}", id, access_token);
+        let url = format!(
+            "https://www.strava.com/api/v3/activities/{}?access_token={}",
+            id, access_token
+        );
         let mut req = reqwest::get(&url)?;
         println!("{}", req.url());
         req.json()
@@ -258,13 +276,15 @@ impl ToString for Activity {
     fn to_string(&self) -> String {
         let distance = (self.distance / 100.0).floor() / 10.0;
         let pace = (self.moving_time as f64 / (self.distance / 1000.0)).round() as u32;
-        format!("[STRAVA {sport}] \"{name}\", {distance} km (↑{elev}m) in {time} ({pace}/km)",
-                sport = self.sport.to_uppercase(),
-                name = self.name,
-                distance = distance,
-                elev = self.total_elevation_gain.round(),
-                time = format_time(self.moving_time),
-                pace = format_time(pace))
+        format!(
+            "[STRAVA {sport}] \"{name}\", {distance} km (↑{elev}m) in {time} ({pace}/km)",
+            sport = self.sport.to_uppercase(),
+            name = self.name,
+            distance = distance,
+            elev = self.total_elevation_gain.round(),
+            time = format_time(self.moving_time),
+            pace = format_time(pace)
+        )
     }
 }
 
@@ -281,7 +301,7 @@ fn handle_segments(msg: &str, access_token: &str) -> Option<String> {
                 println!("{}", e);
                 None
             }
-        }
+        };
     }
     None
 }
@@ -301,7 +321,10 @@ struct Segment {
 }
 impl Segment {
     fn fetch(id: &str, access_token: &str) -> Result<Segment, reqwest::Error> {
-        let url = format!("https://www.strava.com/api/v3/segments/{}?access_token={}", id, access_token);
+        let url = format!(
+            "https://www.strava.com/api/v3/segments/{}?access_token={}",
+            id, access_token
+        );
         let mut req = reqwest::get(&url)?;
         println!("{}", req.url());
         req.json()
@@ -349,6 +372,5 @@ mod tests {
         for reply in s {
             println!("{}", reply);
         }
-
     }
 }
