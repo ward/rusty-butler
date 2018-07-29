@@ -5,72 +5,126 @@ use std::error;
 use std::fmt;
 use std::str::FromStr;
 
-pub fn handler(client: &IrcClient, msg: &Message, config: &Config) {
-    // TODO Lots of needless checks every time. How to avoid?
-    let access_token = get_access_token(config);
-    if access_token.is_none() {
-        return ();
+pub struct StravaHandler {
+    access_token: Option<String>,
+    activity_matcher: Regex,
+    segment_matcher: Regex,
+}
+
+impl StravaHandler {
+    pub fn new(config: &Config) -> StravaHandler {
+        let activity_matcher = Regex::new(r"https?://www\.strava\.com/activities/(\d+)").unwrap();
+        let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
+        match config.options {
+            Some(ref hashmap) => match hashmap.get("strava_access_token") {
+                Some(access_token) => StravaHandler {
+                    access_token: Some(access_token.clone()),
+                    activity_matcher,
+                    segment_matcher,
+                },
+                None => StravaHandler {
+                    access_token: None,
+                    activity_matcher,
+                    segment_matcher,
+                },
+            },
+            None => StravaHandler {
+                access_token: None,
+                activity_matcher,
+                segment_matcher,
+            },
+        }
     }
-    let access_token = access_token.unwrap();
-    if let Command::PRIVMSG(ref channel, ref message) = msg.command {
-        let segment_reply = handle_segments(message, &access_token);
-        match segment_reply {
-            Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
-            _ => (),
+    fn handle_activities(&self, msg: &str, access_token: &str) -> Option<String> {
+        for captures in self.activity_matcher.captures_iter(msg) {
+            let activity = Activity::fetch(captures.get(1).unwrap().as_str(), access_token);
+            return match activity {
+                Ok(activity) => Some(activity.to_string()),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    None
+                }
+            };
         }
-        let activity_reply = handle_activities(message, &access_token);
-        match activity_reply {
-            Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
-            _ => (),
+        None
+    }
+
+    fn handle_segments(&self, msg: &str, access_token: &str) -> Option<String> {
+        for captures in self.segment_matcher.captures_iter(msg) {
+            println!("{}", captures.get(1).unwrap().as_str());
+            let segment = Segment::fetch(captures.get(1).unwrap().as_str(), access_token);
+            return match segment {
+                Ok(segment) => Some(segment.to_string()),
+                Err(e) => {
+                    println!("{}", e);
+                    None
+                }
+            };
         }
-        if match_club(message) {
-            let club_reply = handle_club(message, &access_token);
-            for reply in club_reply {
-                client.send_privmsg(&channel, &reply).unwrap()
+        None
+    }
+
+    fn match_club(msg: &str) -> bool {
+        msg.len() >= 7 && msg[..7].eq_ignore_ascii_case("!strava")
+    }
+    fn handle_club(&self, msg: &str, access_token: &str) -> Vec<String> {
+        let mut result = vec![];
+        let input = msg[7..].trim();
+        println!("Handling club");
+        let club_id = "freenode_running";
+        let club = Club::fetch(club_id, access_token);
+        let leaderboard = ClubLeaderboard::fetch(club_id, access_token);
+        match club {
+            Ok(club) => result.push(format!(
+                "{club} https://www.strava.com/clubs/{club_id}",
+                club = club.to_string(),
+                club_id = club_id
+            )),
+            Err(e) => eprintln!("{}", e),
+        }
+        match leaderboard {
+            Ok(mut leaderboard) => {
+                match input.parse() {
+                    Ok(sort_by) => leaderboard.sort(sort_by),
+                    Err(e) => eprintln!("{}", e),
+                }
+                result.push(leaderboard.to_string())
             }
+            Err(e) => eprintln!("{}", e),
         }
-        // TODO Matching a club's URL
+        result
     }
 }
 
-pub fn get_access_token(config: &Config) -> Option<&String> {
-    let options = &config.options;
-    match options {
-        Some(hm) => hm.get("strava_access_token"),
-        None => None,
+impl super::Handler for StravaHandler {
+    fn handle(&self, client: &IrcClient, msg: &Message) {
+        match self.access_token {
+            Some(ref access_token) => {
+                if let Command::PRIVMSG(ref channel, ref message) = msg.command {
+                    let segment_reply = self.handle_segments(message, &access_token);
+                    match segment_reply {
+                        Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
+                        _ => (),
+                    }
+                    let activity_reply = self.handle_activities(message, &access_token);
+                    match activity_reply {
+                        Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
+                        _ => (),
+                    }
+                    if StravaHandler::match_club(message) {
+                        let club_reply = self.handle_club(message, &access_token);
+                        for reply in club_reply {
+                            client.send_privmsg(&channel, &reply).unwrap()
+                        }
+                    }
+                    // TODO Matching a club's URL
+                }
+            }
+            None => (),
+        }
     }
 }
 
-fn match_club(msg: &str) -> bool {
-    msg.len() >= 7 && msg[..7].eq_ignore_ascii_case("!strava")
-}
-fn handle_club(msg: &str, access_token: &str) -> Vec<String> {
-    let mut result = vec![];
-    let input = msg[7..].trim();
-    println!("Handling club");
-    let club_id = "freenode_running";
-    let club = Club::fetch(club_id, access_token);
-    let leaderboard = ClubLeaderboard::fetch(club_id, access_token);
-    match club {
-        Ok(club) => result.push(format!(
-            "{club} https://www.strava.com/clubs/{club_id}",
-            club = club.to_string(),
-            club_id = club_id
-        )),
-        Err(e) => eprintln!("{}", e),
-    }
-    match leaderboard {
-        Ok(mut leaderboard) => {
-            match input.parse() {
-                Ok(sort_by) => leaderboard.sort(sort_by),
-                Err(e) => eprintln!("{}", e),
-            }
-            result.push(leaderboard.to_string())
-        }
-        Err(e) => eprintln!("{}", e),
-    }
-    result
-}
 #[derive(Deserialize, Debug)]
 struct Club {
     name: String,
@@ -124,7 +178,6 @@ impl ClubLeaderboard {
         headers.set_raw("X-Requested-With", "XmlHttpRequest");
         let mut req = client.get(&url).headers(headers).send()?;
         println!("{}", req.url());
-        //println!("{}", req.text().unwrap());
         req.json()
     }
     fn sort(&mut self, sort_by: ClubLeaderboardSort) {
@@ -235,23 +288,6 @@ impl fmt::Display for ParseClubLeaderboardSortError {
     }
 }
 
-fn handle_activities(msg: &str, access_token: &str) -> Option<String> {
-    // TODO The regex crate suggests using lazy_static crate to avoid creating
-    // this regex every time
-    let activity_regex = Regex::new(r"https?://www\.strava\.com/activities/(\d+)").unwrap();
-    for captures in activity_regex.captures_iter(msg) {
-        let activity = Activity::fetch(captures.get(1).unwrap().as_str(), access_token);
-        return match activity {
-            Ok(activity) => Some(activity.to_string()),
-            Err(e) => {
-                eprintln!("{}", e);
-                None
-            }
-        };
-    }
-    None
-}
-
 #[derive(Deserialize, Debug)]
 struct Activity {
     name: String,
@@ -286,24 +322,6 @@ impl ToString for Activity {
             pace = format_time(pace)
         )
     }
-}
-
-fn handle_segments(msg: &str, access_token: &str) -> Option<String> {
-    // TODO The regex crate suggests using lazy_static crate to avoid creating
-    // this regex every time
-    let segment_regex = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
-    for captures in segment_regex.captures_iter(msg) {
-        println!("{}", captures.get(1).unwrap().as_str());
-        let segment = Segment::fetch(captures.get(1).unwrap().as_str(), access_token);
-        return match segment {
-            Ok(segment) => Some(segment.to_string()),
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        };
-    }
-    None
 }
 
 #[derive(Deserialize, Debug)]
@@ -366,11 +384,5 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stuff() {
-        // TODO Do not commit!
-        let s = handle_club("!strava pace", "");
-        for reply in s {
-            println!("{}", reply);
-        }
-    }
+    fn stuff() {}
 }

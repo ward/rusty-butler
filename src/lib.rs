@@ -11,6 +11,10 @@ extern crate rink;
 pub mod plugins {
     use irc::client::prelude::*;
 
+    pub trait Handler {
+        fn handle(&self, client: &IrcClient, msg: &Message);
+    }
+
     pub fn print_msg(msg: &Message) {
         print!("{}", msg);
     }
