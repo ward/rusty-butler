@@ -25,7 +25,6 @@ fn main() {
     mutable_handlers.push(Mutex::new(Box::new(plugins::calc::CalcHandler::new())));
     reactor.register_client_with_handler(client, move |client, irc_msg| {
         plugins::print_msg(&irc_msg);
-        plugins::beep_boop(client, &irc_msg);
         for handler in &handlers {
             handler.handle(client, &irc_msg);
         }
