@@ -14,6 +14,9 @@ pub mod plugins {
     pub trait Handler {
         fn handle(&self, client: &IrcClient, msg: &Message);
     }
+    pub trait MutableHandler {
+        fn handle(&mut self, client: &IrcClient, msg: &Message);
+    }
 
     pub fn print_msg(msg: &Message) {
         print!("{}", msg);
@@ -33,4 +36,6 @@ pub mod plugins {
     pub mod strava;
 
     pub mod calc;
+
+    pub mod nickname;
 }
