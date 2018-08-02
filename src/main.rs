@@ -20,9 +20,9 @@ fn main() {
     let mut handlers: Vec<Box<Handler>> = vec![];
     handlers.push(Box::new(plugins::strava::StravaHandler::new(&config)));
     handlers.push(Box::new(plugins::time::TimeHandler::new()));
-    handlers.push(Box::new(plugins::calc::CalcHandler::new()));
     let mut mutable_handlers: Vec<Mutex<Box<MutableHandler>>> = vec![];
     mutable_handlers.push(Mutex::new(Box::new(plugins::nickname::NicknameHandler::new(&config))));
+    mutable_handlers.push(Mutex::new(Box::new(plugins::calc::CalcHandler::new())));
     reactor.register_client_with_handler(client, move |client, irc_msg| {
         plugins::print_msg(&irc_msg);
         plugins::beep_boop(client, &irc_msg);
