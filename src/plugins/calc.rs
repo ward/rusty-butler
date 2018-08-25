@@ -1,6 +1,8 @@
 use irc::client::prelude::*;
 use regex::Regex;
 use rink;
+use std::fmt;
+use std::str::FromStr;
 
 pub struct CalcHandler {
     ctx: rink::Context,
@@ -41,10 +43,7 @@ impl CalcHandler {
             target_unit: "lbs".to_owned(),
             default_unit: "kilogram".to_owned(),
         });
-        CalcHandler {
-            ctx,
-            shortcuts,
-        }
+        CalcHandler { ctx, shortcuts }
     }
     fn match_calc(msg: &str) -> bool {
         msg.len() > 5 && msg[..6].eq_ignore_ascii_case("!calc ")
@@ -84,6 +83,26 @@ impl CalcHandler {
         }
         None
     }
+
+    /// Checks incoming message for a !pace calculation.
+    /// The input is some sort of time representation.
+    /// We provide a conversion of t/km to t/mile and vice versa.
+    fn handle_pace(&self, msg: &str) -> Option<String> {
+        if msg.len() < 6 || !msg[..6].eq_ignore_ascii_case("!pace ") {
+            return None;
+        }
+        let input = msg[5..].trim();
+        if let Ok(pace) = input.parse::<Pace>() {
+            Some(format!(
+                "{orig}/km = {miles}/mile || {orig}/mile = {km}/km",
+                orig = pace,
+                miles = pace.to_per_miles(),
+                km = pace.to_per_kilometre()
+            ))
+        } else {
+            None
+        }
+    }
 }
 
 impl super::MutableHandler for CalcHandler {
@@ -112,6 +131,9 @@ impl super::MutableHandler for CalcHandler {
                     }
                 }
             }
+            if let Some(ref paceresult) = self.handle_pace(message) {
+                client.send_privmsg(&channel, paceresult).unwrap();
+            }
         }
     }
 }
@@ -130,6 +152,65 @@ struct CalcShortcut {
     target_unit: String,
     default_unit: String,
 }
+
+struct Pace {
+    secs: u32,
+}
+impl Pace {
+    /// Assumes self is in time per km and creates a new Pace with the time
+    /// per mile
+    pub fn to_per_miles(&self) -> Pace {
+        let secs = (self.secs as f32 * 1.6093) as u32;
+        Pace { secs }
+    }
+    /// Assumes self is in time per mile and creates a new Pace with the time
+    /// per kilometre
+    pub fn to_per_kilometre(&self) -> Pace {
+        let secs = (self.secs as f32 / 1.6093) as u32;
+        Pace { secs }
+    }
+}
+impl fmt::Display for Pace {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mins = self.secs / 60;
+        let secs = self.secs % 60;
+        write!(f, "{}:{:02}", mins, secs)
+    }
+}
+impl FromStr for Pace {
+    type Err = PaceParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+
+        match s.parse::<u32>() {
+            Ok(secs) => Ok(Pace { secs }),
+            Err(_e) => {
+                // Split by non numbers and assume first and second are
+                // the numbers representing mins and seconds
+                let mut parts = s.split(|c: char| !c.is_digit(10)).take(2);
+                // This cannot be the best way to do this...
+                // Can't use ? for my error type without rust nightly,
+                // which I am trying to avoid.
+                if let Some(mins) = parts.next() {
+                    if let Some(secs) = parts.next() {
+                        // Parse both
+                        if let Ok(mins) = mins.parse::<u32>() {
+                            if let Ok(secs) = secs.parse::<u32>() {
+                                return Ok(Pace {
+                                    secs: mins * 60 + secs,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                Err(PaceParseError {})
+            }
+        }
+    }
+}
+struct PaceParseError {}
 
 #[cfg(test)]
 mod tests {
