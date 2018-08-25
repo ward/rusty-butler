@@ -7,6 +7,8 @@ use std::str::FromStr;
 pub struct CalcHandler {
     ctx: rink::Context,
     shortcuts: Vec<CalcShortcut>,
+    feet_to_cm_matcher: Regex,
+    cm_to_feet_matcher: Regex,
 }
 impl CalcHandler {
     pub fn new() -> CalcHandler {
@@ -43,7 +45,17 @@ impl CalcHandler {
             target_unit: "lbs".to_owned(),
             default_unit: "kilogram".to_owned(),
         });
-        CalcHandler { ctx, shortcuts }
+
+        let feet_to_cm_matcher = Regex::new(r"^!cm +(\d+)\D+([0-9.]+)").unwrap();
+        let cm_to_feet_matcher =
+            Regex::new(r"^!(?:f(?:ee|oo)?t|in(?:ch|ches)?) +([0-9.]+) *(?:cm)?$").unwrap();
+
+        CalcHandler {
+            ctx,
+            shortcuts,
+            feet_to_cm_matcher,
+            cm_to_feet_matcher,
+        }
     }
     fn match_calc(msg: &str) -> bool {
         msg.len() > 5 && msg[..6].eq_ignore_ascii_case("!calc ")
@@ -92,6 +104,7 @@ impl CalcHandler {
             return None;
         }
         let input = msg[5..].trim();
+        // TODO: Log failure to parse
         if let Ok(pace) = input.parse::<Pace>() {
             Some(format!(
                 "{orig}/km = {miles}/mile || {orig}/mile = {km}/km",
@@ -102,6 +115,33 @@ impl CalcHandler {
         } else {
             None
         }
+    }
+
+    fn handle_feet_to_cm(&self, msg: &str) -> Option<String> {
+        if let Some(captures) = self.feet_to_cm_matcher.captures(msg) {
+            if let Some(feet) = captures.get(1) {
+                if let Some(inches) = captures.get(2) {
+                    return Some(format!(
+                        "{} feet + {} inches to centimeter",
+                        feet.as_str(),
+                        inches.as_str()
+                    ));
+                }
+            }
+        }
+        None
+    }
+    fn handle_cm_to_feet(&self, msg: &str) -> Option<String> {
+        if let Some(captures) = self.cm_to_feet_matcher.captures(msg) {
+            if let Some(cm) = captures.get(1) {
+                if let Ok(cm) = cm.as_str().parse::<f64>() {
+                    let feet = (cm * 0.032808).floor();
+                    let inches = (((cm * 0.393701) % 12.0) * 1000.0).round() / 1000.0;
+                    return Some(format!("{} ft {} in", feet, inches));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -131,8 +171,17 @@ impl super::MutableHandler for CalcHandler {
                     }
                 }
             }
+            if let Some(ref to_eval) = self.handle_feet_to_cm(message) {
+                match self.eval(to_eval) {
+                    Ok(result) => client.send_privmsg(&channel, &result).unwrap(),
+                    Err(e) => eprintln!("{}", e),
+                }
+            }
             if let Some(ref paceresult) = self.handle_pace(message) {
                 client.send_privmsg(&channel, paceresult).unwrap();
+            }
+            if let Some(ref cm_to_feet) = self.handle_cm_to_feet(message) {
+                client.send_privmsg(&channel, cm_to_feet).unwrap();
             }
         }
     }
@@ -256,6 +305,16 @@ mod tests {
         assert_eq!(
             calc.handle_shortcut("!km 26"),
             Some("26 miles to kilometre".to_owned())
+        );
+    }
+
+    #[test]
+    fn cm_to_feet() {
+        let calc = CalcHandler::new();
+
+        assert_eq!(
+            calc.handle_cm_to_feet("!feet 188"),
+            Some("6 ft 2.016 in".to_owned())
         );
     }
 }
