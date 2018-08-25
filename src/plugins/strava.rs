@@ -1,3 +1,4 @@
+use super::formatting;
 use irc::client::prelude::*;
 use regex::Regex;
 use reqwest;
@@ -198,6 +199,7 @@ impl ClubLeaderboard {
         }
     }
 }
+// TODO Should be implementing Display
 impl ToString for ClubLeaderboard {
     fn to_string(&self) -> String {
         let ranking = self.ranking
@@ -208,7 +210,7 @@ impl ToString for ClubLeaderboard {
                 format!(
                     "{idx}. {athlete}",
                     idx = idx + 1,
-                    athlete = athlete.to_string()
+                    athlete = athlete.to_string(),
                 )
             })
             .fold("".to_string(), |acc, ele| format!("{} {}", acc, ele));
@@ -236,12 +238,14 @@ impl ToString for ClubLeaderboardAthlete {
         let minutes = ((self.moving_time as f64 % 3600.0) / 60.0) as u32;
         let moving_time = format!("{}h{:02}", hours, minutes);
         format!(
-            "{first_name} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
+            "{format_start}{first_name}{format_end} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
             first_name = self.first_name,
             distance = distance,
             moving_time = moving_time,
             pace = format_time(pace),
-            elev_gain = elev_gain
+            elev_gain = elev_gain,
+            format_start = formatting::IrcFormat::Bold,
+            format_end = formatting::IrcFormat::Normal,
         )
     }
 }
