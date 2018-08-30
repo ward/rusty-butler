@@ -389,4 +389,23 @@ mod tests {
 
     #[test]
     fn stuff() {}
+
+    #[test]
+    fn match_club() {
+        let input = "!strava";
+        assert!(StravaHandler::match_club(input));
+        let input = "!stravasdifohoefsbv";
+        assert!(StravaHandler::match_club(input));
+        let input = "!strava pace";
+        assert!(StravaHandler::match_club(input));
+    }
+
+    #[test]
+    fn match_club_and_unicode() {
+        // Input starts with some unicode.
+        // In production we got a panicthat we were splitting halfway through a character.
+        // This crashed the bot
+        let input = "🏃🏃";
+        assert!(!StravaHandler::match_club(input));
+    }
 }
