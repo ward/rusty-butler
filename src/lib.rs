@@ -7,6 +7,8 @@ extern crate serde_json;
 extern crate serde_derive;
 // Calculations
 extern crate rink;
+// Properly splitting strings taking unicode into consideration
+extern crate unicode_segmentation;
 
 pub mod plugins {
     use irc::client::prelude::*;

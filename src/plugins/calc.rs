@@ -3,6 +3,7 @@ use regex::Regex;
 use rink;
 use std::fmt;
 use std::str::FromStr;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct CalcHandler {
     ctx: rink::Context,
@@ -58,11 +59,13 @@ impl CalcHandler {
         }
     }
     fn match_calc(msg: &str) -> bool {
-        msg.len() > 5 && msg[..6].eq_ignore_ascii_case("!calc ")
+        let first_six: String = msg.graphemes(true).take(6).collect();
+        first_six.eq_ignore_ascii_case("!calc ")
     }
 
-    fn get_calc_input(msg: &str) -> &str {
-        msg[5..].trim()
+    fn get_calc_input(msg: &str) -> String {
+        let input: String = msg.graphemes(true).skip(6).collect();
+        input.trim().to_owned()
     }
 
     fn eval(&mut self, line: &str) -> Result<String, String> {
@@ -100,10 +103,12 @@ impl CalcHandler {
     /// The input is some sort of time representation.
     /// We provide a conversion of t/km to t/mile and vice versa.
     fn handle_pace(&self, msg: &str) -> Option<String> {
-        if msg.len() < 6 || !msg[..6].eq_ignore_ascii_case("!pace ") {
+        let first_six: String = msg.graphemes(true).take(6).collect();
+        if !first_six.eq_ignore_ascii_case("!pace ") {
             return None;
         }
-        let input = msg[5..].trim();
+        let input: String = msg.graphemes(true).skip(6).collect();
+        let input = input.trim();
         // TODO: Log failure to parse
         if let Ok(pace) = input.parse::<Pace>() {
             Some(format!(
@@ -149,7 +154,7 @@ impl super::MutableHandler for CalcHandler {
     fn handle(&mut self, client: &IrcClient, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if CalcHandler::match_calc(message) {
-                match self.eval(CalcHandler::get_calc_input(message)) {
+                match self.eval(&CalcHandler::get_calc_input(message)) {
                     Ok(res) => client.send_privmsg(&channel, &res).unwrap(),
                     Err(e) => {
                         eprintln!("{}", e);
@@ -316,5 +321,22 @@ mod tests {
             calc.handle_cm_to_feet("!feet 188"),
             Some("6 ft 2.016 in".to_owned())
         );
+    }
+
+    #[test]
+    fn unicode_line() {
+        CalcHandler::match_calc("🤓🤓🤓🤓");
+        let calc = CalcHandler::new();
+        calc.handle_pace("🤓🤓🤓🤓");
+    }
+
+    #[test]
+    fn pace_conversion() {
+        let calc = CalcHandler::new();
+        let res = calc.handle_pace("!pace 5:00");
+        assert_eq!(
+            res,
+            Some("5:00/km = 8:02/mile || 5:00/mile = 3:06/km".to_owned())
+            );
     }
 }

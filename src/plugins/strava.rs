@@ -5,6 +5,7 @@ use reqwest;
 use std::error;
 use std::fmt;
 use std::str::FromStr;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct StravaHandler {
     access_token: Option<String>,
@@ -66,11 +67,13 @@ impl StravaHandler {
     }
 
     fn match_club(msg: &str) -> bool {
-        msg.len() >= 7 && msg[..7].eq_ignore_ascii_case("!strava")
+        let first_seven: String = msg.graphemes(true).take(7).collect();
+        first_seven.eq_ignore_ascii_case("!strava")
     }
     fn handle_club(&self, msg: &str, access_token: &str) -> Vec<String> {
         let mut result = vec![];
-        let input = msg[7..].trim();
+        let input: String = msg.graphemes(true).skip(7).collect();
+        let input = input.trim();
         println!("Handling club");
         let club_id = "freenode_running";
         let club = Club::fetch(club_id, access_token);
