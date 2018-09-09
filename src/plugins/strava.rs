@@ -81,7 +81,7 @@ impl StravaHandler {
         match club {
             Ok(club) => result.push(format!(
                 "{club} https://www.strava.com/clubs/{club_id}",
-                club = club.to_string(),
+                club = club,
                 club_id = club_id
             )),
             Err(e) => eprintln!("{}", e),
@@ -146,9 +146,10 @@ impl Club {
         req.json()
     }
 }
-impl ToString for Club {
-    fn to_string(&self) -> String {
-        format!(
+impl fmt::Display for Club {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
             "[STRAVA CLUB] {name}, a {sport_type} club with {member_count} members.",
             name = self.name,
             sport_type = self.sport_type,
@@ -202,9 +203,8 @@ impl ClubLeaderboard {
         }
     }
 }
-// TODO Should be implementing Display
-impl ToString for ClubLeaderboard {
-    fn to_string(&self) -> String {
+impl fmt::Display for ClubLeaderboard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ranking = self.ranking
             .iter()
             .take(10)
@@ -213,12 +213,12 @@ impl ToString for ClubLeaderboard {
                 format!(
                     "{idx}. {athlete}",
                     idx = idx + 1,
-                    athlete = athlete.to_string(),
+                    athlete = athlete,
                 )
             })
             .fold("".to_string(), |acc, ele| format!("{} {}", acc, ele));
         // Space too many at the start so we use it here instead
-        format!("[STRAVA CLUB]{ranking}", ranking = ranking)
+        write!(f, "[STRAVA CLUB]{ranking}", ranking = ranking)
     }
 }
 #[derive(Deserialize, Debug)]
@@ -231,8 +231,8 @@ struct ClubLeaderboardAthlete {
     // Using for sorting (can I use it to get the pace/km number?)
     velocity: f64,
 }
-impl ToString for ClubLeaderboardAthlete {
-    fn to_string(&self) -> String {
+impl fmt::Display for ClubLeaderboardAthlete {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 1000.0).floor();
         let pace = (self.moving_time as f64 / (self.distance / 1000.0)).round() as u32;
         let elev_gain = self.elev_gain.round() as u32;
@@ -240,7 +240,8 @@ impl ToString for ClubLeaderboardAthlete {
         let hours = (self.moving_time as f64 / 3600.0) as u32;
         let minutes = ((self.moving_time as f64 % 3600.0) / 60.0) as u32;
         let moving_time = format!("{}h{:02}", hours, minutes);
-        format!(
+        write!(
+            f,
             "{format_start}{first_name}{format_end} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
             first_name = self.first_name,
             distance = distance,
@@ -315,11 +316,12 @@ impl Activity {
         req.json()
     }
 }
-impl ToString for Activity {
-    fn to_string(&self) -> String {
+impl fmt::Display for Activity {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 100.0).floor() / 10.0;
         let pace = (self.moving_time as f64 / (self.distance / 1000.0)).round() as u32;
-        format!(
+        write!(
+            f,
             "[STRAVA {sport}] \"{name}\", {distance} km (↑{elev}m) in {time} ({pace}/km)",
             sport = self.sport.to_uppercase(),
             name = self.name,
@@ -355,14 +357,15 @@ impl Segment {
         req.json()
     }
 }
-impl ToString for Segment {
-    fn to_string(&self) -> String {
+impl fmt::Display for Segment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 100.0).floor() / 10.0;
         let state = match self.state {
             Some(ref s) => s,
             None => "-",
         };
-        format!("[STRAVA SEGMENT] \"{name}\", {activity_type} of {distance}km @ {grade}%. {effort_count} attempts by {athlete_count} athletes. Located in {city}, {state}, {country}.",
+        write!(f,
+               "[STRAVA SEGMENT] \"{name}\", {activity_type} of {distance}km @ {grade}%. {effort_count} attempts by {athlete_count} athletes. Located in {city}, {state}, {country}.",
                 name = self.name,
                 activity_type = self.activity_type,
                 distance = distance,
