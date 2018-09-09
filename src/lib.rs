@@ -21,7 +21,10 @@ pub mod plugins {
     }
 
     pub fn print_msg(msg: &Message) {
-        print!("{}", msg);
+        match msg.command {
+            Command::PING(_, _) | Command::PONG(_, _) => (),
+            _ => print!("{}", msg),
+        }
     }
 
     pub mod time;
