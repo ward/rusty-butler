@@ -110,11 +110,11 @@ impl super::Handler for StravaHandler {
                         Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
                         _ => (),
                     }
-                    let activity_reply = self.handle_activities(message, &access_token);
-                    match activity_reply {
-                        Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
-                        _ => (),
-                    }
+                    // let activity_reply = self.handle_activities(message, &access_token);
+                    // match activity_reply {
+                    //     Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
+                    //     _ => (),
+                    // }
                     if StravaHandler::match_club(message) {
                         let club_reply = self.handle_club(message, &access_token);
                         for reply in club_reply {
