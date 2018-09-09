@@ -7,8 +7,22 @@ extern crate irc;
 use irc::client::prelude::*;
 use std::sync::Mutex;
 
+extern crate clap;
+use clap::{Arg, App};
+
 fn main() {
-    let config = Config::load("bot.toml").expect("Failed to load config");
+    let matches = App::new("rusty-butler")
+        .version("0.1.0")
+        .author("Ward Muylaert")
+        .about("An IRC bot. The world needed more of those.")
+        .arg(Arg::with_name("config")
+             .long("config")
+             .value_name("FILE")
+             .help("Use a different configuration file")
+             .default_value("bot.toml"))
+        .get_matches();
+    let config_file_name = matches.value_of("config").unwrap();
+    let config = Config::load(config_file_name).expect("Failed to load config");
     let mut reactor = IrcReactor::new().expect("Failed to create IrcReactor");
     let client = reactor
         .prepare_client_and_connect(&config)
