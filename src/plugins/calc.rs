@@ -337,6 +337,6 @@ mod tests {
         assert_eq!(
             res,
             Some("5:00/km = 8:02/mile || 5:00/mile = 3:06/km".to_owned())
-            );
+        );
     }
 }

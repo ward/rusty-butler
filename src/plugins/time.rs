@@ -21,7 +21,8 @@ impl super::Handler for TimeHandler {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if TimeHandler::matcher(message) {
                 let now: DateTime<Utc> = Utc::now();
-                let now = now.format("It is currently %A %d %B %Y %H:%M:%S UTC")
+                let now = now
+                    .format("It is currently %A %d %B %Y %H:%M:%S UTC")
                     .to_string();
                 let now = if message.eq_ignore_ascii_case("!gmt") {
                     String::from("Lol GMT, get with the times, grandpa. ") + &now

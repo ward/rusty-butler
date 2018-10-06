@@ -196,26 +196,23 @@ impl ClubLeaderboard {
             ClubLeaderboardSort::Elevation => {
                 self.ranking.sort_unstable_by_key(|a| -a.elev_gain as i64)
             }
-            ClubLeaderboardSort::Moving => self.ranking
+            ClubLeaderboardSort::Moving => self
+                .ranking
                 .sort_unstable_by_key(|a| -(a.moving_time as i64)),
-            ClubLeaderboardSort::Pace => self.ranking
+            ClubLeaderboardSort::Pace => self
+                .ranking
                 .sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64),
         }
     }
 }
 impl fmt::Display for ClubLeaderboard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ranking = self.ranking
+        let ranking = self
+            .ranking
             .iter()
             .take(10)
             .enumerate()
-            .map(|(idx, athlete)| {
-                format!(
-                    "{idx}. {athlete}",
-                    idx = idx + 1,
-                    athlete = athlete,
-                )
-            })
+            .map(|(idx, athlete)| format!("{idx}. {athlete}", idx = idx + 1, athlete = athlete,))
             .fold("".to_string(), |acc, ele| format!("{} {}", acc, ele));
         // Space too many at the start so we use it here instead
         write!(f, "[STRAVA CLUB]{ranking}", ranking = ranking)
