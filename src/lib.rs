@@ -35,6 +35,8 @@ pub mod plugins {
 
     pub mod nickname;
 
+    pub mod lastseen;
+
     pub mod formatting {
         use std::fmt;
 

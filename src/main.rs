@@ -40,6 +40,9 @@ fn main() {
         plugins::nickname::NicknameHandler::new(&config),
     )));
     mutable_handlers.push(Mutex::new(Box::new(plugins::calc::CalcHandler::new())));
+    mutable_handlers.push(Mutex::new(Box::new(
+        plugins::lastseen::LastSeenHandler::new(),
+    )));
     reactor.register_client_with_handler(client, move |client, irc_msg| {
         plugins::print_msg(&irc_msg);
         for handler in &handlers {
