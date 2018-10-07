@@ -1,23 +1,44 @@
 use chrono::prelude::{DateTime, Utc};
 use irc::client::prelude::*;
+use regex::Regex;
 use std::collections::HashMap;
+use std::fmt;
+
+// TODO: Think up a way to make this info accessible for other plugins
 
 #[derive(Debug)]
 pub struct LastSeenHandler {
     events: HashMap<String, LastSeenEvent>,
+    seen_matcher: Regex,
 }
 #[derive(Debug)]
 struct LastSeenEvent {
     when: DateTime<Utc>,
     what: Command,
 }
+impl fmt::Display for LastSeenEvent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Default time format is too detailed
+        // TODO: Debug format of self.what gives too much info
+        write!(
+            f,
+            "Last seen at {when} doing {what}",
+            when = self.when,
+            what = format!("{:?}", self.what),
+        )
+    }
+}
 impl LastSeenHandler {
     pub fn new() -> LastSeenHandler {
+        let seen_matcher = Regex::new(r"^!(?:last)?seen +(.+) *$").unwrap();
         LastSeenHandler {
             events: HashMap::new(),
+            seen_matcher,
         }
     }
 
+    /// Given an IRC Message, considers whether it should be logged for the user that triggered
+    /// this Message.
     fn log(&mut self, msg: &Message) {
         match msg.command {
             Command::PRIVMSG(_, _)
@@ -48,12 +69,25 @@ impl LastSeenHandler {
     fn find_event<'a>(&'a self, nick: &str) -> Option<&'a LastSeenEvent> {
         self.events.get(nick)
     }
+
+    fn seen_trigger(&self, msg: &str) -> Option<String> {
+        if let Some(capture) = self.seen_matcher.captures(msg) {
+            Some(capture.get(1).unwrap().as_str().to_string())
+        } else {
+            None
+        }
+    }
 }
 impl super::MutableHandler for LastSeenHandler {
-    fn handle(&mut self, _client: &IrcClient, msg: &Message) {
+    fn handle(&mut self, client: &IrcClient, msg: &Message) {
+        // "!(last)seen nick" command
+        if let Command::PRIVMSG(ref channel, ref message) = msg.command {
+            if let Some(nick) = self.seen_trigger(message) {
+                if let Some(event) = self.find_event(&nick) {
+                    client.send_privmsg(&channel, &event.to_string()).unwrap();
+                }
+            }
+        }
         self.log(msg);
-        println!("{:?}", self);
-        // TODO: "!(last)seen nick" command
-        // TODO: Think up a way to make this info accessible for other plugins
     }
 }
