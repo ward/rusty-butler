@@ -396,7 +396,7 @@ fn format_time(seconds: u32) -> String {
 /// access things.
 #[derive(Serialize,Deserialize,Debug)]
 struct StravaIrcLink {
-    links: HashMap<String, Vec<String>>,
+    links: HashMap<u64, Vec<String>>,
 }
 impl StravaIrcLink {
     pub fn new() -> StravaIrcLink {
@@ -433,15 +433,19 @@ impl StravaIrcLink {
         }
     }
 
-    pub fn get_nicks(&self, strava_id: &str) -> Option<Vec<String>> {
+    pub fn get_nicks(&self, strava_id: u64) -> Option<Vec<String>> {
         let mut res = vec![];
-        for nick in self.links.get(strava_id)? {
+        for nick in self.links.get(&strava_id)? {
             res.push(nick.clone())
         }
         Some(res)
     }
+    pub fn get_first_nick(&self, strava_id: u64) -> Option<String> {
+        let nicks = self.links.get(&strava_id)?;
+        Some(nicks.get(0).unwrap().to_owned())
+    }
 
-    pub fn get_strava_id(&self, nick: &str) -> Option<String> {
+    pub fn get_strava_id(&self, nick: &str) -> Option<u64> {
         let nick = nick.to_owned();
         for (strava_id, nicks) in self.links.iter() {
             if nicks.contains(&nick) {
@@ -451,16 +455,15 @@ impl StravaIrcLink {
         None
     }
 
-    pub fn insert_connection(&mut self, strava_id: &str, nick: &str) {
-        let owned_id = strava_id.to_string();
+    pub fn insert_connection(&mut self, strava_id: u64, nick: &str) {
         let owned_nick = nick.to_string();
-        if self.links.contains_key(&owned_id) {
-            let nicks = self.links.get_mut(&owned_id).unwrap();
+        if self.links.contains_key(&strava_id) {
+            let nicks = self.links.get_mut(&strava_id).unwrap();
             if !nicks.contains(&owned_nick) {
                 nicks.push(owned_nick)
             }
         } else {
-            self.links.insert(owned_id, vec![owned_nick]);
+            self.links.insert(strava_id, vec![owned_nick]);
         }
     }
 
@@ -476,8 +479,8 @@ impl StravaIrcLink {
         // Looping over it again, ugly
         self.links.retain(|_key, value| value.len() > 1);
     }
-    pub fn remove_strava_id(&mut self, strava_id: &str) {
-        self.links.retain(|key, _value| key != strava_id);
+    pub fn remove_strava_id(&mut self, strava_id: u64) {
+        self.links.retain(|key, _value| key != &strava_id);
     }
 }
 
@@ -507,26 +510,26 @@ mod tests {
     #[test]
     fn strava_irc_link() {
         let mut db = StravaIrcLink::new();
-        db.insert_connection("123", "ward");
-        let result = db.get_nicks("123");
+        db.insert_connection(123, "ward");
+        let result = db.get_nicks(123);
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!(1, result.len());
         assert_eq!("ward", result.get(0).unwrap());
-        db.insert_connection("123", "ward_");
-        db.insert_connection("234", "butler");
+        db.insert_connection(123, "ward_");
+        db.insert_connection(234, "butler");
         db.to_file("testresult.json");
-        let result = db.get_nicks("123");
+        let result = db.get_nicks(123);
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!("ward", result.get(0).unwrap());
         assert_eq!("ward_", result.get(1).unwrap());
-        let result = db.get_nicks("234").unwrap();
+        let result = db.get_nicks(234).unwrap();
         assert_eq!("butler", result.get(0).unwrap());
         assert_eq!(1, result.len());
         db.remove_nick("butler");
-        assert!(db.get_nicks("234").is_none());
-        db.remove_strava_id("123");
+        assert!(db.get_nicks(234).is_none());
+        db.remove_strava_id(123);
         assert!(db.get_strava_id("ward_").is_none());
     }
 }
