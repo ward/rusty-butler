@@ -14,52 +14,33 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub struct StravaHandler {
     access_token: Option<String>,
-    activity_matcher: Regex,
     segment_matcher: Regex,
     irc_links: StravaIrcLink,
 }
 
 impl StravaHandler {
     pub fn new(config: &Config) -> StravaHandler {
-        let activity_matcher = Regex::new(r"https?://www\.strava\.com/activities/(\d+)").unwrap();
         let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
         let irc_links = StravaIrcLink::from_file_or_new("irc_links.json");
         match config.options {
             Some(ref hashmap) => match hashmap.get("strava_access_token") {
                 Some(access_token) => StravaHandler {
                     access_token: Some(access_token.clone()),
-                    activity_matcher,
                     segment_matcher,
                     irc_links,
                 },
                 None => StravaHandler {
                     access_token: None,
-                    activity_matcher,
                     segment_matcher,
                     irc_links,
                 },
             },
             None => StravaHandler {
                 access_token: None,
-                activity_matcher,
                 segment_matcher,
                 irc_links,
             },
         }
-    }
-
-    fn handle_activities(&self, msg: &str, access_token: &str) -> Option<String> {
-        for captures in self.activity_matcher.captures_iter(msg) {
-            let activity = Activity::fetch(captures.get(1).unwrap().as_str(), access_token);
-            return match activity {
-                Ok(activity) => Some(activity.to_string()),
-                Err(e) => {
-                    eprintln!("{}", e);
-                    None
-                }
-            };
-        }
-        None
     }
 
     fn handle_segments(&self, msg: &str, access_token: &str) -> Option<String> {
@@ -122,11 +103,6 @@ impl super::Handler for StravaHandler {
                         Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
                         _ => (),
                     }
-                    // let activity_reply = self.handle_activities(message, &access_token);
-                    // match activity_reply {
-                    //     Some(reply) => client.send_privmsg(&channel, &reply).unwrap(),
-                    //     _ => (),
-                    // }
                     if StravaHandler::match_club(message) {
                         let club_reply = self.handle_club(message, &access_token);
                         for reply in club_reply {
@@ -325,43 +301,6 @@ impl error::Error for ParseClubLeaderboardSortError {
 impl fmt::Display for ParseClubLeaderboardSortError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Failed to parse sorting parameter.")
-    }
-}
-
-#[derive(Deserialize, Debug)]
-struct Activity {
-    name: String,
-    #[serde(rename = "type")]
-    sport: String,
-    distance: f64,
-    total_elevation_gain: f64,
-    moving_time: u32,
-}
-impl Activity {
-    fn fetch(id: &str, access_token: &str) -> Result<Activity, reqwest::Error> {
-        let url = format!(
-            "https://www.strava.com/api/v3/activities/{}?access_token={}",
-            id, access_token
-        );
-        let mut req = reqwest::get(&url)?;
-        println!("{}", req.url());
-        req.json()
-    }
-}
-impl fmt::Display for Activity {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let distance = (self.distance / 100.0).floor() / 10.0;
-        let pace = (self.moving_time as f64 / (self.distance / 1000.0)).round() as u32;
-        write!(
-            f,
-            "[STRAVA {sport}] \"{name}\", {distance} km (↑{elev}m) in {time} ({pace}/km)",
-            sport = self.sport.to_uppercase(),
-            name = self.name,
-            distance = distance,
-            elev = self.total_elevation_gain.round(),
-            time = format_time(self.moving_time),
-            pace = format_time(pace)
-        )
     }
 }
 
