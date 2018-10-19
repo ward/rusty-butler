@@ -7,6 +7,10 @@ use std::error;
 use std::fmt;
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
+use std::fs::File;
+use std::io::Read;
+use serde_json;
+use std::io::Write;
 
 pub struct StravaHandler {
     access_token: Option<String>,
@@ -38,6 +42,7 @@ impl StravaHandler {
             },
         }
     }
+
     fn handle_activities(&self, msg: &str, access_token: &str) -> Option<String> {
         for captures in self.activity_matcher.captures_iter(msg) {
             let activity = Activity::fetch(captures.get(1).unwrap().as_str(), access_token);
@@ -389,6 +394,7 @@ fn format_time(seconds: u32) -> String {
 
 /// Link Strava user IDs to IRC nicks. This struct also provides the convenience functions to
 /// access things.
+#[derive(Serialize,Deserialize,Debug)]
 struct StravaIrcLink {
     links: HashMap<String, Vec<String>>,
 }
@@ -396,6 +402,34 @@ impl StravaIrcLink {
     pub fn new() -> StravaIrcLink {
         StravaIrcLink {
             links: HashMap::new(),
+        }
+    }
+    pub fn from_file_or_new(filename: &str) -> StravaIrcLink {
+        StravaIrcLink::from_file(filename).unwrap_or_else(StravaIrcLink::new)
+    }
+
+    pub fn from_file(filename: &str) -> Option<StravaIrcLink> {
+        // This would be cleaner if we returned a Result<> instead of Option<>
+        // Could use ? macro then.
+        if let Ok(mut f) = File::open(filename) {
+            let mut buffer = String::new();
+            if let Ok(_) = f.read_to_string(&mut buffer) {
+                if let Ok(parsed) = serde_json::from_str(&buffer) {
+                    return Some(parsed)
+                }
+            }
+        }
+        None
+    }
+    pub fn to_file(&self, filename: &str) {
+        // TODO Need to handle failure here better
+        match File::create(filename) {
+            Ok(mut f) => {
+                if let Ok(serialized) = serde_json::to_string(self) {
+                    f.write_all(serialized.as_bytes()).unwrap();
+                }
+            },
+            Err(e) => panic!("Failed to save, {}", e),
         }
     }
 
@@ -481,6 +515,7 @@ mod tests {
         assert_eq!("ward", result.get(0).unwrap());
         db.insert_connection("123", "ward_");
         db.insert_connection("234", "butler");
+        db.to_file("testresult.json");
         let result = db.get_nicks("123");
         assert!(result.is_some());
         let result = result.unwrap();
