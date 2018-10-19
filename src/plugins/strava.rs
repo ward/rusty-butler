@@ -2,6 +2,7 @@ use super::formatting;
 use irc::client::prelude::*;
 use regex::Regex;
 use reqwest;
+use std::collections::HashMap;
 use std::error;
 use std::fmt;
 use std::str::FromStr;
@@ -386,12 +387,69 @@ fn format_time(seconds: u32) -> String {
     }
 }
 
+/// Link Strava user IDs to IRC nicks. This struct also provides the convenience functions to
+/// access things.
+struct StravaIrcLink {
+    links: HashMap<String, Vec<String>>,
+}
+impl StravaIrcLink {
+    pub fn new() -> StravaIrcLink {
+        StravaIrcLink {
+            links: HashMap::new(),
+        }
+    }
+
+    pub fn get_nicks(&self, strava_id: &str) -> Option<Vec<String>> {
+        let mut res = vec![];
+        for nick in self.links.get(strava_id)? {
+            res.push(nick.clone())
+        }
+        Some(res)
+    }
+
+    pub fn get_strava_id(&self, nick: &str) -> Option<String> {
+        let nick = nick.to_owned();
+        for (strava_id, nicks) in self.links.iter() {
+            if nicks.contains(&nick) {
+                return Some(strava_id.to_owned());
+            }
+        }
+        None
+    }
+
+    pub fn insert_connection(&mut self, strava_id: &str, nick: &str) {
+        let owned_id = strava_id.to_string();
+        let owned_nick = nick.to_string();
+        if self.links.contains_key(&owned_id) {
+            let nicks = self.links.get_mut(&owned_id).unwrap();
+            if !nicks.contains(&owned_nick) {
+                nicks.push(owned_nick)
+            }
+        } else {
+            self.links.insert(owned_id, vec![owned_nick]);
+        }
+    }
+
+    pub fn remove_nick(&mut self, nick: &str) {
+        let nick = nick.to_owned();
+        self.links.iter_mut().for_each(|(_strava_id, nicks)| {
+            if nicks.contains(&nick) {
+                // Update once https://github.com/rust-lang/rust/issues/40062 is stable and
+                // done.
+                nicks.retain(|n| n != &nick);
+            }
+        });
+        // Looping over it again, ugly
+        self.links.retain(|_key, value| value.len() > 1);
+    }
+    pub fn remove_strava_id(&mut self, strava_id: &str) {
+        self.links.retain(|key, _value| key != strava_id);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn stuff() {}
 
     #[test]
     fn match_club() {
@@ -410,5 +468,30 @@ mod tests {
         // This crashed the bot
         let input = "🏃🏃";
         assert!(!StravaHandler::match_club(input));
+    }
+
+    #[test]
+    fn strava_irc_link() {
+        let mut db = StravaIrcLink::new();
+        db.insert_connection("123", "ward");
+        let result = db.get_nicks("123");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(1, result.len());
+        assert_eq!("ward", result.get(0).unwrap());
+        db.insert_connection("123", "ward_");
+        db.insert_connection("234", "butler");
+        let result = db.get_nicks("123");
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!("ward", result.get(0).unwrap());
+        assert_eq!("ward_", result.get(1).unwrap());
+        let result = db.get_nicks("234").unwrap();
+        assert_eq!("butler", result.get(0).unwrap());
+        assert_eq!(1, result.len());
+        db.remove_nick("butler");
+        assert!(db.get_nicks("234").is_none());
+        db.remove_strava_id("123");
+        assert!(db.get_strava_id("ward_").is_none());
     }
 }
