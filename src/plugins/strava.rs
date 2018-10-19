@@ -2,43 +2,48 @@ use super::formatting;
 use irc::client::prelude::*;
 use regex::Regex;
 use reqwest;
+use serde_json;
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
-use std::str::FromStr;
-use unicode_segmentation::UnicodeSegmentation;
 use std::fs::File;
 use std::io::Read;
-use serde_json;
 use std::io::Write;
+use std::str::FromStr;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct StravaHandler {
     access_token: Option<String>,
     activity_matcher: Regex,
     segment_matcher: Regex,
+    irc_links: StravaIrcLink,
 }
 
 impl StravaHandler {
     pub fn new(config: &Config) -> StravaHandler {
         let activity_matcher = Regex::new(r"https?://www\.strava\.com/activities/(\d+)").unwrap();
         let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
+        let irc_links = StravaIrcLink::from_file_or_new("irc_links.json");
         match config.options {
             Some(ref hashmap) => match hashmap.get("strava_access_token") {
                 Some(access_token) => StravaHandler {
                     access_token: Some(access_token.clone()),
                     activity_matcher,
                     segment_matcher,
+                    irc_links,
                 },
                 None => StravaHandler {
                     access_token: None,
                     activity_matcher,
                     segment_matcher,
+                    irc_links,
                 },
             },
             None => StravaHandler {
                 access_token: None,
                 activity_matcher,
                 segment_matcher,
+                irc_links,
             },
         }
     }
@@ -98,9 +103,10 @@ impl StravaHandler {
                     Ok(sort_by) => leaderboard.sort(sort_by),
                     Err(e) => eprintln!("{}", e),
                 }
+                leaderboard.override_names(&self.irc_links);
                 result.push(leaderboard.to_string())
             }
-            Err(e) => eprintln!("{}", e),
+            Err(e) => eprintln!("Error fetching leaderboard: {}", e),
         }
         result
     }
@@ -210,6 +216,13 @@ impl ClubLeaderboard {
                 .sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64),
         }
     }
+    fn override_names(&mut self, irc_links: &StravaIrcLink) {
+        self.ranking.iter_mut().for_each(|athlete| {
+            if let Some(nick) = irc_links.get_first_nick(athlete.strava_id) {
+                athlete.first_name = nick.to_owned()
+            }
+        })
+    }
 }
 impl fmt::Display for ClubLeaderboard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -226,6 +239,8 @@ impl fmt::Display for ClubLeaderboard {
 }
 #[derive(Deserialize, Debug)]
 struct ClubLeaderboardAthlete {
+    #[serde(rename = "athlete_id")]
+    strava_id: u64,
     #[serde(rename = "athlete_firstname")]
     first_name: String,
     distance: f64,
@@ -233,6 +248,14 @@ struct ClubLeaderboardAthlete {
     elev_gain: f64,
     // Using for sorting (can I use it to get the pace/km number?)
     velocity: f64,
+}
+impl ClubLeaderboardAthlete {
+    fn prevent_irc_highlight(input: &str) -> String {
+        let mut newname = input.to_owned();
+        // Insert zero width space
+        newname.insert(1, '\u{200b}');
+        newname
+    }
 }
 impl fmt::Display for ClubLeaderboardAthlete {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -246,6 +269,8 @@ impl fmt::Display for ClubLeaderboardAthlete {
         write!(
             f,
             "{format_start}{first_name}{format_end} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
+            // Disabled for now, gives troubles in iterm2 at least.
+            //first_name = ClubLeaderboardAthlete::prevent_irc_highlight(&self.first_name),
             first_name = self.first_name,
             distance = distance,
             moving_time = moving_time,
@@ -256,6 +281,10 @@ impl fmt::Display for ClubLeaderboardAthlete {
         )
     }
 }
+
+/// Enum to handle the different inputs by which the leaderboard can be sorted.
+/// Ensures in the actual sorting we only deal with some known values. The input string is parsed
+/// into one of the enum's values.
 #[derive(Debug, Deserialize, PartialEq)]
 enum ClubLeaderboardSort {
     Elevation,
@@ -381,6 +410,7 @@ impl fmt::Display for Segment {
     }
 }
 
+/// Formats a given amount of seconds to the form m:ss or h:mm:ss, depending on the length.
 fn format_time(seconds: u32) -> String {
     let hours = (seconds as f64 / 3600.0).floor();
     let minutes = ((seconds % 3600) as f64 / 60.0).floor();
@@ -394,7 +424,7 @@ fn format_time(seconds: u32) -> String {
 
 /// Link Strava user IDs to IRC nicks. This struct also provides the convenience functions to
 /// access things.
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct StravaIrcLink {
     links: HashMap<u64, Vec<String>>,
 }
@@ -415,7 +445,7 @@ impl StravaIrcLink {
             let mut buffer = String::new();
             if let Ok(_) = f.read_to_string(&mut buffer) {
                 if let Ok(parsed) = serde_json::from_str(&buffer) {
-                    return Some(parsed)
+                    return Some(parsed);
                 }
             }
         }
@@ -428,7 +458,7 @@ impl StravaIrcLink {
                 if let Ok(serialized) = serde_json::to_string(self) {
                     f.write_all(serialized.as_bytes()).unwrap();
                 }
-            },
+            }
             Err(e) => panic!("Failed to save, {}", e),
         }
     }
