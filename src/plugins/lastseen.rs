@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 // TODO: Think up a way to make this info accessible for other plugins
+// TODO: Want to store this on disk and read it at start up in case of crashes
+//       However, serde does not readily handle DateTime and Command :(
 
 #[derive(Debug)]
 pub struct LastSeenHandler {
@@ -23,7 +25,7 @@ impl fmt::Display for LastSeenEvent {
         write!(
             f,
             "Last seen at {when} doing {what}",
-            when = self.when,
+            when = self.when.format("%Y-%m-%d %H:%M:%S %Z").to_string(),
             what = format!("{:?}", self.what),
         )
     }
