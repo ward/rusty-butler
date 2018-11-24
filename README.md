@@ -17,3 +17,16 @@ Things I was required to install with `apt` on a fresh Lubuntu installation:
 Started this on a private gitea instance so the issue list is still there too.
 Guess I should bring them over to GitHub at some point so people can actually
 contribute.  For now just drop ideas on IRC (freenode -> ward), sorry.
+
+# Maintenance
+
+Follow some best practices to keep the code clean:
+
+- Run `cargo fmt` on the code. Ensure it is installed by issuing `rustup
+  component add rustfmt-preview` (at the time of writing).
+- Run `cargo clippy` on the code. Ensure it is installed by issuing `rustup
+  component add clippy-preview` (at the time of writing).
+- Run `cargo outdated` to check for outdated dependencies. See
+  https://github.com/kbknapp/cargo-outdated. Currently install is via `cargo
+  install cargo-outdated`.
+- Run `cargo test`.
