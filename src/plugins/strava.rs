@@ -226,10 +226,16 @@ struct ClubLeaderboardAthlete {
     velocity: f64,
 }
 impl ClubLeaderboardAthlete {
+    /// To prevent triggering people's highlights in IRC, add a zero width space after the first
+    /// character. Possible problem: seems to screw up things at times in weechat used through
+    /// iTerm2.
     fn prevent_irc_highlight(input: &str) -> String {
         let mut newname = input.to_owned();
-        // Insert zero width space
-        newname.insert(1, '\u{200b}');
+        let mut idx = 1;
+        while !input.is_char_boundary(idx) {
+            idx = idx + 1;
+        }
+        newname.insert(idx, '\u{200b}');
         newname
     }
 }
@@ -246,8 +252,8 @@ impl fmt::Display for ClubLeaderboardAthlete {
             f,
             "{format_start}{first_name}{format_end} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
             // Disabled for now, gives troubles in iterm2 at least.
-            //first_name = ClubLeaderboardAthlete::prevent_irc_highlight(&self.first_name),
-            first_name = self.first_name,
+            first_name = ClubLeaderboardAthlete::prevent_irc_highlight(&self.first_name),
+            // first_name = self.first_name,
             distance = distance,
             moving_time = moving_time,
             pace = format_time(pace),
@@ -500,5 +506,12 @@ mod tests {
         assert!(db.get_nicks(234).is_none());
         db.remove_strava_id(123);
         assert!(db.get_strava_id("ward_").is_none());
+    }
+
+    #[test]
+    fn irc_highlight_prevention() {
+        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("ward"), "w​ard");
+        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("Žilvinas"), "Ž​ilvinas");
+        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("🇧🇪🇧🇪🇧🇪"), "🇧​🇪🇧🇪🇧🇪");
     }
 }
