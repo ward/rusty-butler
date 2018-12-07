@@ -85,6 +85,7 @@ impl StravaHandler {
                     Err(e) => eprintln!("{}", e),
                 }
                 leaderboard.override_names(&self.irc_links);
+                leaderboard.drop_ignored(&self.irc_links);
                 result.push(leaderboard.to_string())
             }
             Err(e) => eprintln!("Error fetching leaderboard: {}", e),
@@ -198,6 +199,10 @@ impl ClubLeaderboard {
                 athlete.first_name = nick.to_owned()
             }
         })
+    }
+    fn drop_ignored(&mut self, irc_links: &StravaIrcLink) {
+        self.ranking
+            .retain(|athlete| !irc_links.is_ignored(athlete.strava_id));
     }
 }
 impl fmt::Display for ClubLeaderboard {
@@ -369,14 +374,21 @@ fn format_time(seconds: u32) -> String {
 
 /// Link Strava user IDs to IRC nicks. This struct also provides the convenience functions to
 /// access things.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 struct StravaIrcLink {
-    links: HashMap<u64, Vec<String>>,
+    users: HashMap<u64, StravaIrcUser>,
+}
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct StravaIrcUser {
+    #[serde(default)]
+    nicks: Vec<String>,
+    #[serde(default)]
+    ignore: bool,
 }
 impl StravaIrcLink {
     pub fn new() -> StravaIrcLink {
         StravaIrcLink {
-            links: HashMap::new(),
+            users: HashMap::new(),
         }
     }
     pub fn from_file_or_new(filename: &str) -> StravaIrcLink {
@@ -389,14 +401,18 @@ impl StravaIrcLink {
         if let Ok(mut f) = File::open(filename) {
             let mut buffer = String::new();
             if let Ok(_) = f.read_to_string(&mut buffer) {
-                if let Ok(parsed) = serde_json::from_str(&buffer) {
-                    return Some(parsed);
+                match serde_json::from_str(&buffer) {
+                    Ok(parsed) => return Some(parsed),
+                    Err(e) => {
+                        eprintln!("Failed to parse StravaIrcLink: {}", e);
+                        return None;
+                    }
                 }
             }
         }
         None
     }
-    pub fn to_file(&self, filename: &str) {
+    pub fn _to_file(&self, filename: &str) {
         // TODO Need to handle failure here better
         match File::create(filename) {
             Ok(mut f) => {
@@ -408,54 +424,73 @@ impl StravaIrcLink {
         }
     }
 
-    pub fn get_nicks(&self, strava_id: u64) -> Option<Vec<String>> {
+    pub fn _get_nicks(&self, strava_id: u64) -> Option<Vec<String>> {
         let mut res = vec![];
-        for nick in self.links.get(&strava_id)? {
+        for nick in &self.users.get(&strava_id)?.nicks {
             res.push(nick.clone())
         }
-        Some(res)
+        if self.users.get(&strava_id)?.nicks.is_empty() {
+            None
+        } else {
+            Some(res)
+        }
     }
     pub fn get_first_nick(&self, strava_id: u64) -> Option<String> {
-        let nicks = self.links.get(&strava_id)?;
-        Some(nicks.get(0).unwrap().to_owned())
+        let nicks = &self.users.get(&strava_id)?.nicks;
+        if self.users.get(&strava_id)?.nicks.is_empty() {
+            None
+        } else {
+            Some(nicks.get(0).unwrap().to_owned())
+        }
     }
 
-    pub fn get_strava_id(&self, nick: &str) -> Option<u64> {
+    pub fn _get_strava_id(&self, nick: &str) -> Option<u64> {
         let nick = nick.to_owned();
-        for (strava_id, nicks) in self.links.iter() {
-            if nicks.contains(&nick) {
+        for (strava_id, user) in self.users.iter() {
+            if user.nicks.contains(&nick) {
                 return Some(strava_id.to_owned());
             }
         }
         None
     }
 
-    pub fn insert_connection(&mut self, strava_id: u64, nick: &str) {
+    pub fn _insert_connection(&mut self, strava_id: u64, nick: &str) {
         let owned_nick = nick.to_string();
-        if self.links.contains_key(&strava_id) {
-            let nicks = self.links.get_mut(&strava_id).unwrap();
-            if !nicks.contains(&owned_nick) {
-                nicks.push(owned_nick)
+        if self.users.contains_key(&strava_id) {
+            let user = self.users.get_mut(&strava_id).unwrap();
+            if !user.nicks.contains(&owned_nick) {
+                user.nicks.push(owned_nick)
             }
         } else {
-            self.links.insert(strava_id, vec![owned_nick]);
+            let new_user = StravaIrcUser {
+                nicks: vec![owned_nick],
+                ignore: false,
+            };
+            self.users.insert(strava_id, new_user);
         }
     }
 
-    pub fn remove_nick(&mut self, nick: &str) {
+    pub fn _remove_nick(&mut self, nick: &str) {
         let nick = nick.to_owned();
-        self.links.iter_mut().for_each(|(_strava_id, nicks)| {
-            if nicks.contains(&nick) {
+        self.users.iter_mut().for_each(|(_strava_id, user)| {
+            if user.nicks.contains(&nick) {
                 // Update once https://github.com/rust-lang/rust/issues/40062 is stable and
                 // done.
-                nicks.retain(|n| n != &nick);
+                user.nicks.retain(|n| n != &nick);
             }
         });
         // Looping over it again, ugly
-        self.links.retain(|_key, value| value.len() > 1);
+        self.users.retain(|_strava_id, user| user.nicks.len() > 1);
     }
-    pub fn remove_strava_id(&mut self, strava_id: u64) {
-        self.links.retain(|key, _value| key != &strava_id);
+    pub fn _remove_strava_id(&mut self, strava_id: u64) {
+        self.users.retain(|id, _user| id != &strava_id);
+    }
+
+    pub fn is_ignored(&self, strava_id: u64) -> bool {
+        match self.users.get(&strava_id) {
+            None => false,
+            Some(user) => user.ignore,
+        }
     }
 }
 
@@ -485,33 +520,60 @@ mod tests {
     #[test]
     fn strava_irc_link() {
         let mut db = StravaIrcLink::new();
-        db.insert_connection(123, "ward");
-        let result = db.get_nicks(123);
+        db._insert_connection(123, "ward");
+        let result = db._get_nicks(123);
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!(1, result.len());
         assert_eq!("ward", result.get(0).unwrap());
-        db.insert_connection(123, "ward_");
-        db.insert_connection(234, "butler");
-        db.to_file("testresult.json");
-        let result = db.get_nicks(123);
+        db._insert_connection(123, "ward_");
+        db._insert_connection(234, "butler");
+        db._to_file("testresult.json");
+        let result = db._get_nicks(123);
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!("ward", result.get(0).unwrap());
         assert_eq!("ward_", result.get(1).unwrap());
-        let result = db.get_nicks(234).unwrap();
+        let result = db._get_nicks(234).unwrap();
         assert_eq!("butler", result.get(0).unwrap());
         assert_eq!(1, result.len());
-        db.remove_nick("butler");
-        assert!(db.get_nicks(234).is_none());
-        db.remove_strava_id(123);
-        assert!(db.get_strava_id("ward_").is_none());
+        db._remove_nick("butler");
+        assert!(db._get_nicks(234).is_none());
+        db._remove_strava_id(123);
+        assert!(db._get_strava_id("ward_").is_none());
+    }
+
+    #[test]
+    fn strava_irc_link_parse() {
+        let input = "{ \"users\":
+          {
+                \"1\": {
+                  \"nicks\": [\"ward\",\"ward_\"]
+                },
+                \"2\": {
+                  \"ignore\": true
+                }
+                }}";
+        let parsed: StravaIrcLink = serde_json::from_str(&input).unwrap();
+        assert!(parsed.is_ignored(2));
+        assert!(!parsed.is_ignored(1));
+        assert_eq!(parsed.get_first_nick(1).unwrap(), "ward");
+        assert!(parsed.get_first_nick(2).is_none());
     }
 
     #[test]
     fn irc_highlight_prevention() {
-        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("ward"), "w​ard");
-        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("Žilvinas"), "Ž​ilvinas");
-        assert_eq!(ClubLeaderboardAthlete::prevent_irc_highlight("🇧🇪🇧🇪🇧🇪"), "🇧​🇪🇧🇪🇧🇪");
+        assert_eq!(
+            ClubLeaderboardAthlete::prevent_irc_highlight("ward"),
+            "w​ard"
+        );
+        assert_eq!(
+            ClubLeaderboardAthlete::prevent_irc_highlight("Žilvinas"),
+            "Ž​ilvinas"
+        );
+        assert_eq!(
+            ClubLeaderboardAthlete::prevent_irc_highlight("🇧🇪🇧🇪🇧🇪"),
+            "🇧​🇪🇧🇪🇧🇪"
+        );
     }
 }
