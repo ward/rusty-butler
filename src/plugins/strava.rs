@@ -240,7 +240,7 @@ impl ClubLeaderboardAthlete {
         while !input.is_char_boundary(idx) {
             idx = idx + 1;
         }
-        newname.insert(idx, '\u{200b}');
+        newname.insert(idx, '\u{200d}');
         newname
     }
 }
