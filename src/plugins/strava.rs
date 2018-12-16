@@ -565,15 +565,15 @@ mod tests {
     fn irc_highlight_prevention() {
         assert_eq!(
             ClubLeaderboardAthlete::prevent_irc_highlight("ward"),
-            "w​ard"
+            "w‍ard"
         );
         assert_eq!(
             ClubLeaderboardAthlete::prevent_irc_highlight("Žilvinas"),
-            "Ž​ilvinas"
+            "Ž‍ilvinas"
         );
         assert_eq!(
             ClubLeaderboardAthlete::prevent_irc_highlight("🇧🇪🇧🇪🇧🇪"),
-            "🇧​🇪🇧🇪🇧🇪"
+            "🇧‍🇪🇧🇪🇧🇪"
         );
     }
 }
