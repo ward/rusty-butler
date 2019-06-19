@@ -238,7 +238,7 @@ impl ClubLeaderboardAthlete {
         let mut newname = input.to_owned();
         let mut idx = 1;
         while !input.is_char_boundary(idx) {
-            idx = idx + 1;
+            idx += 1;
         }
         newname.insert(idx, '\u{200d}');
         newname
@@ -400,7 +400,7 @@ impl StravaIrcLink {
         // Could use ? macro then.
         if let Ok(mut f) = File::open(filename) {
             let mut buffer = String::new();
-            if let Ok(_) = f.read_to_string(&mut buffer) {
+            if f.read_to_string(&mut buffer).is_ok() {
                 match serde_json::from_str(&buffer) {
                     Ok(parsed) => return Some(parsed),
                     Err(e) => {
@@ -486,9 +486,10 @@ impl StravaIrcLink {
         self.users.retain(|id, _user| id != &strava_id);
     }
 
+    /// Decide whether a certain user should be considered ignored.
     pub fn is_ignored(&self, strava_id: u64) -> bool {
         match self.users.get(&strava_id) {
-            None => false,
+            None => true,
             Some(user) => user.ignore,
         }
     }
@@ -511,7 +512,7 @@ mod tests {
     #[test]
     fn match_club_and_unicode() {
         // Input starts with some unicode.
-        // In production we got a panicthat we were splitting halfway through a character.
+        // In production we got a panic that we were splitting halfway through a character.
         // This crashed the bot
         let input = "🏃🏃";
         assert!(!StravaHandler::match_club(input));
