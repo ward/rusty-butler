@@ -37,6 +37,8 @@ pub mod plugins {
 
     pub mod lastseen;
 
+    pub mod elo;
+
     pub mod formatting {
         use std::fmt;
 
