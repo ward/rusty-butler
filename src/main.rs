@@ -33,10 +33,10 @@ fn main() {
     // Note: because of the move there, the register_client_with_handler takes
     // ownership of `config` so we cannot use it afterwards anymore!
     // Don't think we care to use it again (for now) anyway.
-    let mut handlers: Vec<Box<Handler>> = vec![];
+    let mut handlers: Vec<Box<dyn Handler>> = vec![];
     handlers.push(Box::new(plugins::strava::StravaHandler::new(&config)));
     handlers.push(Box::new(plugins::time::TimeHandler::new()));
-    let mut mutable_handlers: Vec<Mutex<Box<MutableHandler>>> = vec![];
+    let mut mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![];
     mutable_handlers.push(Mutex::new(Box::new(
         plugins::nickname::NicknameHandler::new(&config),
     )));

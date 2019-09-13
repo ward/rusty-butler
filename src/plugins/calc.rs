@@ -140,8 +140,8 @@ impl CalcHandler {
         if let Some(captures) = self.cm_to_feet_matcher.captures(msg) {
             if let Some(cm) = captures.get(1) {
                 if let Ok(cm) = cm.as_str().parse::<f64>() {
-                    let feet = (cm * 0.032808).floor();
-                    let inches = (((cm * 0.393701) % 12.0) * 1000.0).round() / 1000.0;
+                    let feet = (cm * 0.032_808).floor();
+                    let inches = (((cm * 0.393_701) % 12.0) * 1000.0).round() / 1000.0;
                     return Some(format!("{} ft {} in", feet, inches));
                 }
             }

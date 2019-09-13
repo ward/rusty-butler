@@ -96,24 +96,20 @@ impl StravaHandler {
 
 impl super::Handler for StravaHandler {
     fn handle(&self, client: &IrcClient, msg: &Message) {
-        match self.access_token {
-            Some(ref access_token) => {
-                if let Command::PRIVMSG(ref channel, ref message) = msg.command {
-                    let segment_reply = self.handle_segments(message, &access_token);
-                    match segment_reply {
-                        Some(segment_id) => client.send_privmsg(&channel, &segment_id).unwrap(),
-                        _ => (),
-                    }
-                    if StravaHandler::match_club(message) {
-                        let club_reply = self.handle_club(message, &access_token);
-                        for reply in club_reply {
-                            client.send_privmsg(&channel, &reply).unwrap()
-                        }
-                    }
-                    // TODO Matching a club's URL
+        if let Some(ref access_token) = self.access_token {
+            if let Command::PRIVMSG(ref channel, ref message) = msg.command {
+                let segment_reply = self.handle_segments(message, &access_token);
+                if let Some(segment_id) = segment_reply {
+                    client.send_privmsg(&channel, &segment_id).unwrap()
                 }
+                if StravaHandler::match_club(message) {
+                    let club_reply = self.handle_club(message, &access_token);
+                    for reply in club_reply {
+                        client.send_privmsg(&channel, &reply).unwrap()
+                    }
+                }
+                // TODO Matching a club's URL
             }
-            None => (),
         }
     }
 }
@@ -187,7 +183,7 @@ impl ClubLeaderboard {
             }
             ClubLeaderboardSort::Moving => self
                 .ranking
-                .sort_unstable_by_key(|a| -(a.moving_time as i64)),
+                .sort_unstable_by_key(|a| -i64::from(a.moving_time)),
             ClubLeaderboardSort::Pace => self
                 .ranking
                 .sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64),
@@ -247,11 +243,11 @@ impl ClubLeaderboardAthlete {
 impl fmt::Display for ClubLeaderboardAthlete {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 1000.0).floor();
-        let pace = (self.moving_time as f64 / (self.distance / 1000.0)).round() as u32;
+        let pace = (f64::from(self.moving_time) / (self.distance / 1000.0)).round() as u32;
         let elev_gain = self.elev_gain.round() as u32;
         // Moving time format
-        let hours = (self.moving_time as f64 / 3600.0) as u32;
-        let minutes = ((self.moving_time as f64 % 3600.0) / 60.0) as u32;
+        let hours = (f64::from(self.moving_time) / 3600.0) as u32;
+        let minutes = ((f64::from(self.moving_time) % 3600.0) / 60.0) as u32;
         let moving_time = format!("{}h{:02}", hours, minutes);
         write!(
             f,
@@ -305,7 +301,7 @@ impl error::Error for ParseClubLeaderboardSortError {
     fn description(&self) -> &str {
         "Failed to parse sorting parameter."
     }
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         None
     }
 }
@@ -362,8 +358,8 @@ impl fmt::Display for Segment {
 
 /// Formats a given amount of seconds to the form m:ss or h:mm:ss, depending on the length.
 fn format_time(seconds: u32) -> String {
-    let hours = (seconds as f64 / 3600.0).floor();
-    let minutes = ((seconds % 3600) as f64 / 60.0).floor();
+    let hours = (f64::from(seconds) / 3600.0).floor();
+    let minutes = (f64::from(seconds % 3600) / 60.0).floor();
     let seconds = seconds % 60;
     if hours == 0.0 {
         return format!("{}:{:02}", minutes, seconds);

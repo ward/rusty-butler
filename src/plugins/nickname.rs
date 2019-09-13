@@ -34,13 +34,10 @@ impl NicknameHandler {
         self.last_attempt = Instant::now();
     }
     fn retake_nick(&self, client: &IrcClient) {
-        match self.nick {
-            Some(ref nick) => {
-                if client.current_nickname() != nick {
-                    client.send(Command::NICK(nick.to_string())).unwrap();
-                }
+        if let Some(ref nick) = self.nick {
+            if client.current_nickname() != nick {
+                client.send(Command::NICK(nick.to_string())).unwrap();
             }
-            None => (),
         }
     }
     fn handle_nickserv(&self, client: &IrcClient, msg: &Message) {
