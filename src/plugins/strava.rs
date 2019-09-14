@@ -153,20 +153,13 @@ struct ClubLeaderboard {
 }
 impl ClubLeaderboard {
     fn fetch(id: &str, _access_token: &str) -> Result<ClubLeaderboard, reqwest::Error> {
-        use reqwest::header::qitem;
         let url = format!("https://www.strava.com/clubs/{}/leaderboard", id);
         // More involved than the others because we need to change headers
         let client = reqwest::Client::new();
-        let mut headers = reqwest::header::Headers::new();
-        let accept = reqwest::header::Accept(vec![
-            qitem(reqwest::mime::TEXT_JAVASCRIPT),
-            qitem(reqwest::mime::APPLICATION_JAVASCRIPT),
-            qitem("application/ecmascript".parse().unwrap()),
-            qitem("application/x-ecmascript".parse().unwrap()),
-        ]);
-        headers.set(accept);
-        headers.set_raw("X-Requested-With", "XmlHttpRequest");
-        let mut req = client.get(&url).headers(headers).send()?;
+        let mut req = client.get(&url)
+            .header("Accept", "text/javascript, application/javascript, application/ecmascript, application/x-ecmascript")
+            .header("X-Requested-With", "XmlHttpRequest")
+            .send()?;
         println!("{}", req.url());
         req.json()
     }
