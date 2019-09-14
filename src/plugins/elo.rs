@@ -3,21 +3,33 @@ use irc::client::prelude::*;
 use reqwest;
 use unicode_segmentation::UnicodeSegmentation;
 
-// TODO: Expire cache after a day or so
-
 pub struct EloHandler {
     elorankings: EloRanking,
-    cache_time: u64,
-    last_update: u64,
+    cache_time: chrono::Duration,
+    last_update: DateTime<Utc>,
 }
 impl EloHandler {
     pub fn new() -> EloHandler {
         EloHandler {
             elorankings: EloRanking::new().unwrap(),
-            cache_time: 0,
-            last_update: 0,
+            cache_time: chrono::Duration::hours(12),
+            last_update: Utc::now(),
         }
     }
+
+    fn is_cache_stale(&self) -> bool {
+        let now = Utc::now();
+        now - self.last_update > self.cache_time
+    }
+
+    /// Tries to update the rankings, leaves old one untouched if it fails.
+    fn update_rankings(&mut self) {
+        if let Some(newrankings) = EloRanking::new() {
+            self.elorankings = newrankings;
+            self.last_update = Utc::now();
+        }
+    }
+
     fn is_elo_trigger(msg: &str) -> bool {
         "!elo".eq_ignore_ascii_case(msg.trim())
     }
@@ -81,6 +93,12 @@ impl EloHandler {
 impl super::MutableHandler for EloHandler {
     fn handle(&mut self, client: &IrcClient, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
+            // Downside: This makes for updates if not requested at all.
+            // Upside: When the command *is* used, it will be pretty fast.
+            if self.is_cache_stale() {
+                self.update_rankings();
+            }
+
             let reply = self
                 .handle_elo_ranking(message)
                 .or_else(|| self.handle_elo_nth(message))
