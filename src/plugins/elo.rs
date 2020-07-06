@@ -91,7 +91,7 @@ impl EloHandler {
 }
 
 impl super::MutableHandler for EloHandler {
-    fn handle(&mut self, client: &IrcClient, msg: &Message) {
+    fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             // Downside: This makes for updates if not requested at all.
             // Upside: When the command *is* used, it will be pretty fast.

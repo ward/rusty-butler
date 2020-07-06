@@ -33,14 +33,14 @@ impl NicknameHandler {
     fn reset_time(&mut self) {
         self.last_attempt = Instant::now();
     }
-    fn retake_nick(&self, client: &IrcClient) {
+    fn retake_nick(&self, client: &Client) {
         if let Some(ref nick) = self.nick {
             if client.current_nickname() != nick {
                 client.send(Command::NICK(nick.to_string())).unwrap();
             }
         }
     }
-    fn handle_nickserv(&self, client: &IrcClient, msg: &Message) {
+    fn handle_nickserv(&self, client: &Client, msg: &Message) {
         // NOTE The irc library we use already has some logic surrounding logging in. See fn
         // `ClientState::send_nick_password(&self)`. That function gets called automatically at the
         // end of the MOTD (or when the notice is sent that there is no MOTD). Effectively, this
@@ -49,9 +49,12 @@ impl NicknameHandler {
         // want ours to trigger in case we retake a name.
         if let Some(ref pass) = self.nickserv_password {
             if let Command::NICKSERV(ref text) = msg.command {
-                if text.contains("This nickname is registered.") {
+                if text.contains(&"This nickname is registered.".to_owned()) {
                     client
-                        .send(Command::NICKSERV(format!("IDENTIFY {}", pass)))
+                        .send(Command::NICKSERV(vec![
+                            "IDENTIFY".to_string(),
+                            pass.to_owned(),
+                        ]))
                         .unwrap();
                 }
             }
@@ -60,7 +63,7 @@ impl NicknameHandler {
 }
 
 impl super::MutableHandler for NicknameHandler {
-    fn handle(&mut self, client: &IrcClient, msg: &Message) {
+    fn handle(&mut self, client: &Client, msg: &Message) {
         if self.is_it_time() {
             self.reset_time();
             self.retake_nick(client);

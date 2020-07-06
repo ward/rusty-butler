@@ -151,7 +151,7 @@ impl CalcHandler {
 }
 
 impl super::MutableHandler for CalcHandler {
-    fn handle(&mut self, client: &IrcClient, msg: &Message) {
+    fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if CalcHandler::match_calc(message) {
                 match self.eval(&CalcHandler::get_calc_input(message)) {

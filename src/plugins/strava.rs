@@ -22,18 +22,11 @@ impl StravaHandler {
     pub fn new(config: &Config) -> StravaHandler {
         let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
         let irc_links = StravaIrcLink::from_file_or_new("irc_links.json");
-        match config.options {
-            Some(ref hashmap) => match hashmap.get("strava_access_token") {
-                Some(access_token) => StravaHandler {
-                    access_token: Some(access_token.clone()),
-                    segment_matcher,
-                    irc_links,
-                },
-                None => StravaHandler {
-                    access_token: None,
-                    segment_matcher,
-                    irc_links,
-                },
+        match config.options.get("strava_access_token") {
+            Some(access_token) => StravaHandler {
+                access_token: Some(access_token.clone()),
+                segment_matcher,
+                irc_links,
             },
             None => StravaHandler {
                 access_token: None,
@@ -95,7 +88,7 @@ impl StravaHandler {
 }
 
 impl super::Handler for StravaHandler {
-    fn handle(&self, client: &IrcClient, msg: &Message) {
+    fn handle(&self, client: &Client, msg: &Message) {
         if let Some(ref access_token) = self.access_token {
             if let Command::PRIVMSG(ref channel, ref message) = msg.command {
                 let segment_reply = self.handle_segments(message, &access_token);

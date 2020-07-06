@@ -81,7 +81,7 @@ impl LastSeenHandler {
     }
 }
 impl super::MutableHandler for LastSeenHandler {
-    fn handle(&mut self, client: &IrcClient, msg: &Message) {
+    fn handle(&mut self, client: &Client, msg: &Message) {
         // "!(last)seen nick" command
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if let Some(nick) = self.seen_trigger(message) {

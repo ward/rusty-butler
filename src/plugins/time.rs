@@ -17,7 +17,7 @@ impl TimeHandler {
 }
 
 impl super::Handler for TimeHandler {
-    fn handle(&self, client: &IrcClient, msg: &Message) {
+    fn handle(&self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if TimeHandler::matcher(message) {
                 let now: DateTime<Utc> = Utc::now();

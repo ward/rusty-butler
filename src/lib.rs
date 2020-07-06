@@ -5,10 +5,10 @@ pub mod plugins {
     use irc::client::prelude::*;
 
     pub trait Handler {
-        fn handle(&self, client: &IrcClient, msg: &Message);
+        fn handle(&self, client: &Client, msg: &Message);
     }
     pub trait MutableHandler {
-        fn handle(&mut self, client: &IrcClient, msg: &Message);
+        fn handle(&mut self, client: &Client, msg: &Message);
     }
 
     pub fn print_msg(msg: &Message) {
