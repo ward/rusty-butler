@@ -1,14 +1,5 @@
-extern crate chrono;
-extern crate irc;
-extern crate regex;
-extern crate reqwest;
-extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-// Calculations
-extern crate rink;
-// Properly splitting strings taking unicode into consideration
-extern crate unicode_segmentation;
 
 pub mod plugins {
     use irc::client::prelude::*;

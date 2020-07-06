@@ -1,13 +1,10 @@
-extern crate rusty_butler_lib;
 use rusty_butler_lib::plugins;
 use rusty_butler_lib::plugins::Handler;
 use rusty_butler_lib::plugins::MutableHandler;
 
-extern crate irc;
 use irc::client::prelude::*;
 use std::sync::Mutex;
 
-extern crate clap;
 use clap::{App, Arg};
 
 fn main() {
