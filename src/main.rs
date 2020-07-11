@@ -45,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         plugins::lastseen::LastSeenHandler::new(),
     )));
     mutable_handlers.push(Mutex::new(Box::new(plugins::elo::EloHandler::new())));
+    mutable_handlers.push(Mutex::new(Box::new(plugins::games::GamesHandler::new())));
 
     // Note: because of the move there, the register_client_with_handler takes
     // ownership of `config` so we cannot use it afterwards anymore!

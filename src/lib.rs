@@ -30,6 +30,8 @@ pub mod plugins {
 
     pub mod elo;
 
+    pub mod games;
+
     pub mod formatting {
         use std::fmt;
 
