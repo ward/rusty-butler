@@ -86,7 +86,8 @@ impl super::MutableHandler for GamesHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if let Some(query) = self.get_query(message) {
-                let filtered = self.games.query(&query);
+                let query = Query::from_message(&query);
+                let filtered = self.games.query(&query.just_query_string());
                 let mut result = String::new();
                 for country in &filtered.countries {
                     result.push_str("<");
@@ -129,7 +130,143 @@ impl Default for GamesHandler {
         Self::new()
     }
 }
+
+#[derive(Debug, PartialEq)]
+struct Query {
+    query: Vec<String>,
+    country: Option<String>,
+    competition: Option<String>,
+    time: QueryTime,
+}
+
+impl Query {
+    fn from_message(msg: &str) -> Self {
+        let msg_parts = msg.split(' ');
+
+        // Ugly parsing
+        // Parse out @time ones
+        // If encountering a --country or --competition, everything that follows (except another
+        // special thing) will be added as country or competition query.
+        let mut query = vec![];
+        let mut country: Option<String> = None;
+        let mut competition: Option<String> = None;
+        let mut parsing_country = false;
+        let mut parsing_competition = false;
+        let mut time = QueryTime::Today;
+        for part in msg_parts {
+            if part.eq_ignore_ascii_case("--country") {
+                parsing_country = true;
+                parsing_competition = false;
+                country = Some(String::new());
+            } else if part.eq_ignore_ascii_case("--competition") {
+                parsing_country = true;
+                parsing_competition = true;
+                competition = Some(String::new());
+            } else if part.eq_ignore_ascii_case("@today") {
+                time = QueryTime::Today;
+            } else if part.eq_ignore_ascii_case("@now") || part.eq_ignore_ascii_case("@live") {
+                time = QueryTime::Live;
+            } else if part.eq_ignore_ascii_case("@tomorrow") {
+                time = QueryTime::Tomorrow;
+            } else if part.eq_ignore_ascii_case("@yesterday") || part.eq_ignore_ascii_case("@yday")
+            {
+                time = QueryTime::Yesterday;
+            } else if part.eq_ignore_ascii_case("@finished") || part.eq_ignore_ascii_case("@past") {
+                time = QueryTime::Finished;
+            } else if part.eq_ignore_ascii_case("@upcoming") || part.eq_ignore_ascii_case("@soon") {
+                time = QueryTime::Upcoming;
+            } else if parsing_country {
+                let mut curr_country = country.expect("Should not be possible to be None");
+                if !curr_country.is_empty() {
+                    curr_country.push_str(" ");
+                }
+                curr_country.push_str(part);
+                country = Some(curr_country);
+            } else if parsing_competition {
+                let mut curr_competition = competition.expect("Should not be possible to be None");
+                if !curr_competition.is_empty() {
+                    curr_competition.push_str(" ");
+                }
+                curr_competition.push_str(part);
+                competition = Some(curr_competition);
+            } else if part.is_empty() {
+                continue;
+            } else {
+                query.push(part.to_owned());
             }
         }
+        Self {
+            query,
+            country,
+            competition,
+            time,
+        }
+    }
+
+    fn just_query_string(&self) -> String {
+        self.query.join(" ")
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum QueryTime {
+    Today,
+    Tomorrow,
+    Yesterday,
+    Finished,
+    Live,
+    Upcoming,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normal_query() {
+        let desired = Query {
+            query: vec![String::from("anderlecht"), String::from("brugge")],
+            country: None,
+            competition: None,
+            time: QueryTime::Today,
+        };
+        let query = Query::from_message("anderlecht brugge");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_country_query() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Belgium")),
+            competition: None,
+            time: QueryTime::Today,
+        };
+        let query = Query::from_message("--country Belgium");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_query_with_many_spaces() {
+        let desired = Query {
+            query: vec![String::from("anderlecht"), String::from("brugge")],
+            country: None,
+            competition: None,
+            time: QueryTime::Today,
+        };
+        let query = Query::from_message("anderlecht    brugge");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_country_with_spaces() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("San Marino")),
+            competition: None,
+            time: QueryTime::Today,
+        };
+        let query = Query::from_message("--country San Marino");
+        assert_eq!(desired, query);
     }
 }
