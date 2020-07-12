@@ -12,12 +12,6 @@ Things I was required to install with `apt` on a fresh Lubuntu installation:
 - `libssl-dev` for openssl-sys crate
 - `libgmp-dev` (possibly) for the rink crate
 
-# Contributing
-
-Started this on a private gitea instance so the issue list is still there too.
-Guess I should bring them over to GitHub at some point so people can actually
-contribute.  For now just drop ideas on IRC (freenode -> ward), sorry.
-
 # Maintenance
 
 Follow some best practices to keep the code clean:
