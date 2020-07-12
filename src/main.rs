@@ -11,7 +11,7 @@ use clap::{App, Arg};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("rusty-butler")
-        .version("0.1.0")
+        .version("0.2.0")
         .author("Ward Muylaert")
         .about("An IRC bot. The world needed more of those.")
         .arg(
@@ -47,10 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mutable_handlers.push(Mutex::new(Box::new(plugins::elo::EloHandler::new())));
     mutable_handlers.push(Mutex::new(Box::new(plugins::games::GamesHandler::new())));
 
-    // Note: because of the move there, the register_client_with_handler takes
-    // ownership of `config` so we cannot use it afterwards anymore!
-    // Don't think we care to use it again (for now) anyway.
-    // reactor.register_client_with_handler(client, move |client, irc_msg| {
     while let Some(irc_msg) = stream.next().await.transpose()? {
         plugins::print_msg(&irc_msg);
         for handler in &handlers {
@@ -62,7 +58,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             mutable_handler.handle(&client, &irc_msg);
         }
     }
-    // reactor.run().expect("Failed to run IrcReactor");
 
     Ok(())
 }

@@ -8,17 +8,18 @@ use regex::Regex;
 pub struct GamesHandler {
     games: Football,
     query_matcher: Regex,
+    empty_query_matcher: Regex,
 }
-
-// TODO Use clap's get_matches_from to parse queries with options?
 
 impl GamesHandler {
     pub fn new() -> Self {
         let games = get_all_games().expect("Failed to get games");
         let query_matcher = Regex::new(r"!games? +(.+)$").unwrap();
+        let empty_query_matcher = Regex::new(r"!games? *$").unwrap();
         Self {
             games,
             query_matcher,
+            empty_query_matcher,
         }
     }
 
@@ -33,6 +34,11 @@ impl GamesHandler {
         } else {
             None
         }
+    }
+
+    /// An empty query is just a "!game" or "!games" command
+    fn is_empty_query(&self, msg: &str) -> bool {
+        self.empty_query_matcher.is_match(msg)
     }
 
     fn game_to_irc(game: &Game) -> String {
@@ -98,6 +104,31 @@ impl super::MutableHandler for GamesHandler {
                 }
                 println!("{}", result);
                 client.send_privmsg(&channel, &result).unwrap();
+            } else if self.is_empty_query(message) {
+                let mut result = String::new();
+                if self.games.countries.is_empty() {
+                    result.push_str("I've got nothing. Go outside and enjoy the weather.");
+                } else {
+                    result.push_str("Check out some places: ");
+                    let mut country_names =
+                        self.games.countries.iter().map(|country| &country.name);
+                    result.push_str(country_names.next().unwrap());
+                    for country_name in country_names {
+                        result.push_str(", ");
+                        result.push_str(country_name);
+                    }
+                }
+                client.send_privmsg(&channel, &result).unwrap();
+            }
+        }
+    }
+}
+
+impl Default for GamesHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
             }
         }
     }
