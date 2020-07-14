@@ -47,6 +47,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     mutable_handlers.push(Mutex::new(Box::new(plugins::elo::EloHandler::new())));
     mutable_handlers.push(Mutex::new(Box::new(plugins::games::GamesHandler::new())));
 
+    // TODO Should these handlers all become async? There should not be much intersection so
+    // perhaps not worth the effort. Only one will _truly_ react to a message.
     while let Some(irc_msg) = stream.next().await.transpose()? {
         plugins::print_msg(&irc_msg);
         for handler in &handlers {

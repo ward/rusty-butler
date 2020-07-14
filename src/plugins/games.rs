@@ -1,12 +1,13 @@
 use chrono::prelude::*;
+use chrono::Duration;
 use football::*;
 use irc::client::prelude::*;
 use regex::Regex;
 
-// TODO Need to invalidate cache after x minutes
-
 pub struct GamesHandler {
     games: Football,
+    cached_at: DateTime<Utc>,
+    cache_threshold: Duration,
     query_matcher: Regex,
     empty_query_matcher: Regex,
 }
@@ -14,10 +15,14 @@ pub struct GamesHandler {
 impl GamesHandler {
     pub fn new() -> Self {
         let games = get_all_games().expect("Failed to get games");
+        let cached_at = Utc::now();
+        let cache_threshold = Duration::minutes(2);
         let query_matcher = Regex::new(r"!games? +(.+)$").unwrap();
         let empty_query_matcher = Regex::new(r"!games? *$").unwrap();
         Self {
             games,
+            cached_at,
+            cache_threshold,
             query_matcher,
             empty_query_matcher,
         }
@@ -41,6 +46,7 @@ impl GamesHandler {
         self.empty_query_matcher.is_match(msg)
     }
 
+    /// Turn a Game object into a String as I prefer to show them on IRC.
     fn game_to_irc(game: &Game) -> String {
         match &game.status {
             GameStatus::Ended => format!(
@@ -80,12 +86,32 @@ impl GamesHandler {
             GameStatus::Cancelled => format!("(cancelled) {} - {}", game.home_team, game.away_team),
         }
     }
+
+    /// Update the list of games if cache is older than a certain threshold.
+    ///
+    /// TODO: Should/can this be async? Kick off an update while still using current stored
+    /// results. Or perhaps if updating takes longer than x seconds, use old data.
+    fn update(&mut self) {
+        let now = Utc::now();
+        if now - self.cached_at > self.cache_threshold {
+            println!("Starting football games update...");
+            match get_all_games() {
+                Ok(new_games) => {
+                    println!("Got football games update.");
+                    self.games = new_games;
+                    self.cached_at = now;
+                }
+                Err(e) => eprintln!("Failed to update football games. {}", e),
+            }
+        }
+    }
 }
 
 impl super::MutableHandler for GamesHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if let Some(query) = self.get_query(message) {
+                self.update();
                 let query = Query::from_message(&query);
                 let filtered = self.games.query(&query.just_query_string());
                 let mut result = String::new();
@@ -106,6 +132,7 @@ impl super::MutableHandler for GamesHandler {
                 println!("{}", result);
                 client.send_privmsg(&channel, &result).unwrap();
             } else if self.is_empty_query(message) {
+                self.update();
                 let mut result = String::new();
                 if self.games.countries.is_empty() {
                     result.push_str("I've got nothing. Go outside and enjoy the weather.");
@@ -119,6 +146,7 @@ impl super::MutableHandler for GamesHandler {
                         result.push_str(country_name);
                     }
                 }
+                println!("{}", result);
                 client.send_privmsg(&channel, &result).unwrap();
             }
         }
@@ -131,6 +159,8 @@ impl Default for GamesHandler {
     }
 }
 
+/// Attempt at putting some structure into the queries that people can use. Will parse messages
+/// into a Query object. Query is then what is used to decide what games to show.
 #[derive(Debug, PartialEq)]
 struct Query {
     query: Vec<String>,
