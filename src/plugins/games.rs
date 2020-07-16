@@ -111,9 +111,18 @@ impl super::MutableHandler for GamesHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if let Some(query) = self.get_query(message) {
+                println!("Handling !games query: '{}'", query);
                 self.update();
                 let query = Query::from_message(&query);
                 let filtered = self.games.query(&query.just_query_string());
+                let filtered = match query.time {
+                    QueryTime::Today => filtered.today(),
+                    QueryTime::Yesterday => filtered.yesterday(),
+                    QueryTime::Tomorrow => filtered.tomorrow(),
+                    QueryTime::Finished => filtered.ended(),
+                    QueryTime::Live => filtered.live(),
+                    QueryTime::Upcoming => filtered.upcoming(),
+                };
                 let mut result = String::new();
                 for country in &filtered.countries {
                     result.push_str("<");
@@ -129,17 +138,25 @@ impl super::MutableHandler for GamesHandler {
                         }
                     }
                 }
+                // Say something if nothing was found
+                if filtered.countries.is_empty() {
+                    result = String::from("Your !games query returned no results.");
+                }
                 println!("{}", result);
+                // TODO: Too long messages get trimmed
+                // TODO: Also should put a hard limit on how many games to show
                 client.send_privmsg(&channel, &result).unwrap();
             } else if self.is_empty_query(message) {
+                println!("Handling empty !games");
                 self.update();
                 let mut result = String::new();
-                if self.games.countries.is_empty() {
-                    result.push_str("I've got nothing. Go outside and enjoy the weather.");
+                let todays_games = self.games.today();
+                if todays_games.countries.is_empty() {
+                    result.push_str("I've got nothing today. Go outside and enjoy the weather.");
                 } else {
                     result.push_str("Check out some places: ");
                     let mut country_names =
-                        self.games.countries.iter().map(|country| &country.name);
+                        todays_games.countries.iter().map(|country| &country.name);
                     result.push_str(country_names.next().unwrap());
                     for country_name in country_names {
                         result.push_str(", ");
@@ -238,7 +255,9 @@ impl Query {
     }
 }
 
-#[derive(Debug, PartialEq)]
+// TODO Part of these should probably be put into a QueryStatus instead of a QueryTime. Querying
+// finished might not expect to get everything from yesterday too, currently it would.
+#[derive(Debug, Clone, PartialEq)]
 enum QueryTime {
     Today,
     Tomorrow,
