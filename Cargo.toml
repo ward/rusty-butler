@@ -25,4 +25,4 @@ unicode-segmentation = "1.6"
 clap = "2.32.0"
 tokio = { version = "0.2", features = ["macros"] }
 futures = "0.3"
-football = { git = "ssh://git@github.com/ward/football.git" }
+football = { git = "https://github.com/ward/football" }
