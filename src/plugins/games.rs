@@ -17,8 +17,8 @@ impl GamesHandler {
         let games = get_all_games().expect("Failed to get games");
         let cached_at = Utc::now();
         let cache_threshold = Duration::minutes(2);
-        let query_matcher = Regex::new(r"!games? +(.+)$").unwrap();
-        let empty_query_matcher = Regex::new(r"!games? *$").unwrap();
+        let query_matcher = Regex::new(r"^!games? +(.+)$").unwrap();
+        let empty_query_matcher = Regex::new(r"^!games? *$").unwrap();
         Self {
             games,
             cached_at,
