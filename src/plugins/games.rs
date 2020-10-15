@@ -164,6 +164,7 @@ impl super::MutableHandler for GamesHandler {
                     QueryTime::Upcoming => filtered.upcoming(),
                 };
                 let mut result = String::new();
+                let mut gamecounter = 0;
                 for country in &filtered.countries {
                     result.push_str("<");
                     result.push_str(&country.name);
@@ -173,6 +174,11 @@ impl super::MutableHandler for GamesHandler {
                         result.push_str(&competition.name);
                         result.push_str("] ");
                         for game in &competition.games {
+                            gamecounter += 1;
+                            // Max number of games to show
+                            if gamecounter > MAX_NUMBER_OF_GAMES {
+                                continue;
+                            }
                             result.push_str(&GamesHandler::game_to_irc(game));
                             result.push_str(" ");
                         }
@@ -183,7 +189,14 @@ impl super::MutableHandler for GamesHandler {
                     result = String::from("Your !games query returned no results.");
                 }
                 println!("{}", result);
-                // TODO: Also should put a hard limit on how many games to show
+                if gamecounter > MAX_NUMBER_OF_GAMES {
+                    let too_many_games_msg = format!(
+                        "Too many games ({}). Showing first {}.",
+                        gamecounter, MAX_NUMBER_OF_GAMES
+                    );
+                    send_privmsg(client, &channel, &too_many_games_msg);
+                }
+
                 send_privmsg(client, &channel, &result);
             } else if self.is_empty_query(message) {
                 println!("Handling empty !games");
