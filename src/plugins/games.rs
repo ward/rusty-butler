@@ -14,7 +14,16 @@ pub struct GamesHandler {
 
 impl GamesHandler {
     pub fn new() -> Self {
-        let games = get_all_games().expect("Failed to get games");
+        let games = match get_all_games() {
+            Ok(games) => games,
+            Err(e) => {
+                eprintln!(
+                    "Error while getting games, returning empty instead. Error: {}",
+                    e
+                );
+                Default::default()
+            }
+        };
         let cached_at = Utc::now();
         let cache_threshold = Duration::minutes(2);
         let query_matcher = Regex::new(r"^!games? +(.+)$").unwrap();
