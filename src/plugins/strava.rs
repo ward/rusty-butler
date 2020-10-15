@@ -28,11 +28,14 @@ impl StravaHandler {
                 segment_matcher,
                 irc_links,
             },
-            None => StravaHandler {
-                access_token: None,
-                segment_matcher,
-                irc_links,
-            },
+            None => {
+                println!("No Strava access token, disabling plugin.");
+                StravaHandler {
+                    access_token: None,
+                    segment_matcher,
+                    irc_links,
+                }
+            }
         }
     }
 
@@ -173,6 +176,9 @@ impl ClubLeaderboard {
             ClubLeaderboardSort::Pace => self
                 .ranking
                 .sort_unstable_by_key(|a| -(a.velocity * 1000.0) as i64),
+            ClubLeaderboardSort::Slope => self
+                .ranking
+                .sort_unstable_by_key(|a| -(1000.0 * a.elev_gain / a.distance) as i64),
         }
     }
     fn override_names(&mut self, irc_links: &StravaIrcLink) {
@@ -260,6 +266,7 @@ enum ClubLeaderboardSort {
     Distance,
     Moving,
     Pace,
+    Slope,
 }
 impl Default for ClubLeaderboardSort {
     fn default() -> Self {
@@ -277,6 +284,7 @@ impl FromStr for ClubLeaderboardSort {
             "distance" | "dist" | "length" | "len" => Ok(ClubLeaderboardSort::Distance),
             "moving" | "time" | "duration" => Ok(ClubLeaderboardSort::Moving),
             "pace" | "speed" | "velocity" => Ok(ClubLeaderboardSort::Pace),
+            "slope" | "steep" | "steepness" => Ok(ClubLeaderboardSort::Slope),
             _ => Err(ParseClubLeaderboardSortError),
         }
     }
