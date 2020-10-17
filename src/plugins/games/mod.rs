@@ -112,7 +112,7 @@ impl super::MutableHandler for GamesHandler {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             let query = if message.eq_ignore_ascii_case("!epl") {
                 // !epl shortshortcut (in future replace this with an alias plugin)
-                self.get_query("!game England Premier League")
+                self.get_query("!game --country England --competition Premier League")
             } else if message.eq_ignore_ascii_case("!genk") {
                 // !genk shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game genk")

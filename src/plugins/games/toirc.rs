@@ -41,10 +41,10 @@ impl ToIrc for football::Game {
                 self.away_team
             ),
             football::GameStatus::Postponed => {
-                format!("(postponed) {} - {}", self.home_team, self.away_team)
+                format!("(postp.) {} - {}", self.home_team, self.away_team)
             }
             football::GameStatus::Cancelled => {
-                format!("(cancelled) {} - {}", self.home_team, self.away_team)
+                format!("(cancld) {} - {}", self.home_team, self.away_team)
             }
         }
     }
