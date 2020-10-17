@@ -3,11 +3,39 @@
 
 use regex::Regex;
 
+#[derive(Debug, PartialEq)]
+pub struct Query {
+    pub query: Vec<String>,
+    pub country: Option<String>,
+    pub competition: Option<String>,
+    pub time: QueryTime,
+}
+
+impl Query {
+    pub fn just_query_string(&self) -> String {
+        self.query.join(" ")
+    }
+}
+
+// TODO Part of these should probably be put into a QueryStatus instead of a QueryTime. Querying
+// finished might not expect to get everything from yesterday too, currently it would.
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryTime {
+    Today,
+    Tomorrow,
+    Yesterday,
+    Finished,
+    Live,
+    Upcoming,
+}
+
 /// Sometimes people like to be lazy and not type too much. "epl" will always mean english premier
 /// league, "mls" major league soccer, "cl" champions league, ... Shortcuts are defined through
 /// this struct.
 struct Shortcut {
     regex: Regex,
+    country: Option<String>,
+    competition: Option<String>,
     replace_by: Vec<String>,
 }
 
@@ -24,18 +52,48 @@ impl Parser {
         // (?i) is this crate's syntax to turn on case insensitivity
         shortcuts.push(Shortcut {
             regex: Regex::new(r"^(?i)[eb]pl$").unwrap(),
-            replace_by: vec![
-                "England".to_string(),
-                "Premier".to_string(),
-                "League".to_string(),
-            ],
+            country: Some(String::from("England")),
+            competition: Some(String::from("Premier League")),
+            replace_by: vec![],
         });
         shortcuts.push(Shortcut {
             regex: Regex::new(r"^(?i)(?:la?)?liga$").unwrap(),
+            country: Some(String::from("Spain")),
+            competition: Some(String::from("LaLiga Santander")),
+            replace_by: vec![],
+        });
+        shortcuts.push(Shortcut {
+            regex: Regex::new(r"^(?i)u?cl$").unwrap(),
+            country: Some(String::from("Champions League")),
+            competition: None,
+            replace_by: vec![],
+        });
+        shortcuts.push(Shortcut {
+            regex: Regex::new(r"^(?i)u?el$").unwrap(),
+            country: Some(String::from("Europa League")),
+            competition: None,
+            replace_by: vec![],
+        });
+        shortcuts.push(Shortcut {
+            regex: Regex::new(r"^(?i)bundes(?:liga)?$").unwrap(),
+            country: Some(String::from("Germany")),
+            competition: Some(String::from("Bundesliga")),
+            replace_by: vec![],
+        });
+        shortcuts.push(Shortcut {
+            regex: Regex::new(r"^(?i)serie[ -]a$").unwrap(),
+            country: Some(String::from("Italy")),
+            competition: Some(String::from("Serie A")),
+            replace_by: vec![],
+        });
+        shortcuts.push(Shortcut {
+            regex: Regex::new(r"^(?i)mls$").unwrap(),
+            country: Some(String::from("USA")),
+            competition: None,
             replace_by: vec![
-                "Spain".to_string(),
-                "LaLiga".to_string(),
-                "Santander".to_string(),
+                String::from("Major"),
+                String::from("League"),
+                String::from("Soccer"),
             ],
         });
         Self { shortcuts }
@@ -100,6 +158,8 @@ impl Parser {
                         for piece in &shortcut.replace_by {
                             query.push(piece.to_owned());
                         }
+                        country = shortcut.country.clone();
+                        competition = shortcut.competition.clone();
                         encountered_shortcut = true;
                         break;
                     }
@@ -116,34 +176,6 @@ impl Parser {
             time,
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Query {
-    pub query: Vec<String>,
-    /// TODO Not making use of this yet
-    pub country: Option<String>,
-    /// TODO Not making use of this yet
-    pub competition: Option<String>,
-    pub time: QueryTime,
-}
-
-impl Query {
-    pub fn just_query_string(&self) -> String {
-        self.query.join(" ")
-    }
-}
-
-// TODO Part of these should probably be put into a QueryStatus instead of a QueryTime. Querying
-// finished might not expect to get everything from yesterday too, currently it would.
-#[derive(Debug, Clone, PartialEq)]
-pub enum QueryTime {
-    Today,
-    Tomorrow,
-    Yesterday,
-    Finished,
-    Live,
-    Upcoming,
 }
 
 #[cfg(test)]
@@ -205,13 +237,9 @@ mod tests {
     #[test]
     fn test_epl_shortcut() {
         let desired = Query {
-            query: vec![
-                String::from("England"),
-                String::from("Premier"),
-                String::from("League"),
-            ],
-            country: None,
-            competition: None,
+            query: vec![],
+            country: Some(String::from("England")),
+            competition: Some(String::from("Premier League")),
             time: QueryTime::Today,
         };
         let parser = Parser::new();
@@ -222,13 +250,9 @@ mod tests {
     #[test]
     fn test_epl_caps_shortcut() {
         let desired = Query {
-            query: vec![
-                String::from("England"),
-                String::from("Premier"),
-                String::from("League"),
-            ],
-            country: None,
-            competition: None,
+            query: vec![],
+            country: Some(String::from("England")),
+            competition: Some(String::from("Premier League")),
             time: QueryTime::Today,
         };
         let parser = Parser::new();
@@ -239,13 +263,9 @@ mod tests {
     #[test]
     fn test_epl_shortcut_with_time() {
         let desired = Query {
-            query: vec![
-                String::from("England"),
-                String::from("Premier"),
-                String::from("League"),
-            ],
-            country: None,
-            competition: None,
+            query: vec![],
+            country: Some(String::from("England")),
+            competition: Some(String::from("Premier League")),
             time: QueryTime::Yesterday,
         };
         let parser = Parser::new();

@@ -128,6 +128,16 @@ impl super::MutableHandler for GamesHandler {
                 let query = self.query_parser.from_message(&query);
                 println!("Query parsed as: {:?}", query);
                 let filtered = self.games.query(&query.just_query_string());
+                let filtered = if let Some(country_name) = query.country {
+                    filtered.country(&country_name)
+                } else {
+                    filtered
+                };
+                let filtered = if let Some(competition_name) = query.competition {
+                    filtered.competition(&competition_name)
+                } else {
+                    filtered
+                };
                 let filtered = match query.time {
                     query::QueryTime::Today => filtered.today(),
                     query::QueryTime::Yesterday => filtered.yesterday(),

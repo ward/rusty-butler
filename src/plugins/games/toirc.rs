@@ -54,7 +54,7 @@ impl ToIrc for football::Football {
     fn to_irc(&self) -> String {
         let mut result = String::new();
         let mut gamecounter = 0;
-        for country in &self.countries {
+        'countryloop: for country in &self.countries {
             result.push_str("<");
             result.push_str(&country.name);
             result.push_str("> ");
@@ -67,7 +67,7 @@ impl ToIrc for football::Football {
                     // Max number of games to show. Circular dependency doesn't bother the compiler
                     // apparently.
                     if gamecounter > super::MAX_NUMBER_OF_GAMES {
-                        continue;
+                        break 'countryloop;
                     }
                     result.push_str(&game.to_irc());
                     result.push_str(" ");
