@@ -9,11 +9,6 @@ mod query;
 mod toirc;
 use toirc::ToIrc;
 
-// To do for good enough parity:
-//
-// - League shortcuts (!game epl, !game bel, ...)
-// - !epl
-
 const MAX_NUMBER_OF_GAMES: usize = 20;
 
 /// Sends a message to a given target. If the message is longer than a certain length, the message
@@ -115,9 +110,12 @@ impl GamesHandler {
 impl super::MutableHandler for GamesHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
-            let query = if message == "!epl" {
+            let query = if message.eq_ignore_ascii_case("!epl") {
                 // !epl shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game England Premier League")
+            } else if message.eq_ignore_ascii_case("!genk") {
+                // !genk shortshortcut (in future replace this with an alias plugin)
+                self.get_query("!game genk")
             } else {
                 // Otherwise check for regular !game query
                 self.get_query(message)
