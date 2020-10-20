@@ -1,8 +1,6 @@
 use super::formatting;
 use irc::client::prelude::*;
 use regex::Regex;
-use reqwest;
-use serde_json;
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
@@ -11,6 +9,9 @@ use std::io::Read;
 use std::io::Write;
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
+
+// TODO: Get rid of things relying on access_token, I think strava's more privacy oriented setup
+// ruins them and they are never used.
 
 pub struct StravaHandler {
     access_token: Option<String>,
@@ -72,14 +73,18 @@ impl StravaHandler {
                 club = club,
                 club_id = club_id
             )),
-            Err(e) => eprintln!("{}", e),
+            Err(e) => eprintln!("Club::fetch failed: {}", e),
         }
         match leaderboard {
             Ok(mut leaderboard) => {
                 match input.parse() {
                     Ok(sort_by) => leaderboard.sort(sort_by),
-                    Err(e) => eprintln!("{}", e),
+                    Err(e) => eprintln!(
+                        "Failed to parse leaderboard sort, default sort used. Error: {}",
+                        e
+                    ),
                 }
+                // Note that this removes names not in the strava links file!!
                 leaderboard.override_names(&self.irc_links);
                 leaderboard.drop_ignored(&self.irc_links);
                 result.push(leaderboard.to_string())
@@ -101,6 +106,7 @@ impl super::Handler for StravaHandler {
                 if StravaHandler::match_club(message) {
                     let club_reply = self.handle_club(message, &access_token);
                     for reply in club_reply {
+                        println!("SEND: {}", reply);
                         client.send_privmsg(&channel, &reply).unwrap()
                     }
                 }
@@ -203,7 +209,7 @@ impl fmt::Display for ClubLeaderboard {
             .map(|(idx, athlete)| format!("{idx}. {athlete}", idx = idx + 1, athlete = athlete,))
             .fold("".to_string(), |acc, ele| format!("{} {}", acc, ele));
         // Space too many at the start so we use it here instead
-        write!(f, "[STRAVA CLUB]{ranking}", ranking = ranking)
+        write!(f, "🏆{ranking}", ranking = ranking)
     }
 }
 #[derive(Deserialize, Debug)]
@@ -237,20 +243,23 @@ impl fmt::Display for ClubLeaderboardAthlete {
         let distance = (self.distance / 1000.0).floor();
         let pace = (f64::from(self.moving_time) / (self.distance / 1000.0)).round() as u32;
         let elev_gain = self.elev_gain.round() as u32;
+        // Percentage
+        let slope = self.elev_gain / self.distance * 100.0;
+        let slope = format!("{:.1}%", slope);
         // Moving time format
         let hours = (f64::from(self.moving_time) / 3600.0) as u32;
         let minutes = ((f64::from(self.moving_time) % 3600.0) / 60.0) as u32;
         let moving_time = format!("{}h{:02}", hours, minutes);
+        // TODO: It was already long, but adding slope makes it way too long
         write!(
             f,
-            "{format_start}{first_name}{format_end} {distance}k in {moving_time} ({pace}/k ↑{elev_gain}m)",
-            // Disabled for now, gives troubles in iterm2 at least.
+            "{format_start}{first_name}{format_end} {distance}k {moving_time} {pace}/k ↑{elev_gain}m {slope}",
             first_name = ClubLeaderboardAthlete::prevent_irc_highlight(&self.first_name),
-            // first_name = self.first_name,
             distance = distance,
             moving_time = moving_time,
             pace = format_time(pace),
             elev_gain = elev_gain,
+            slope = slope,
             format_start = formatting::IrcFormat::Bold,
             format_end = formatting::IrcFormat::Normal,
         )
@@ -565,6 +574,30 @@ mod tests {
         assert_eq!(
             ClubLeaderboardAthlete::prevent_irc_highlight("🇧🇪🇧🇪🇧🇪"),
             "🇧‍🇪🇧🇪🇧🇪"
+        );
+    }
+
+    #[test]
+    fn athlete_display() {
+        let athlete = ClubLeaderboardAthlete {
+            strava_id: 12345,
+            first_name: "ward".to_owned(),
+            distance: 10_000.0,
+            moving_time: 60 * 50,
+            elev_gain: 100.0,
+            velocity: 20.0,
+        };
+        assert_eq!(
+            athlete.to_string(),
+            "\u{2}w\u{200d}ard\u{f} 10k in 0h50 (5:00/k ↑100m 1.0%)"
+        );
+        let leaderboard = ClubLeaderboard {
+            ranking: vec![athlete],
+            sorted_by: ClubLeaderboardSort::Slope,
+        };
+        assert_eq!(
+            leaderboard.to_string(),
+            "🏆 1. \u{2}w\u{200d}ard\u{f} 10k in 0h50 (5:00/k ↑100m 1.0%)"
         );
     }
 }
