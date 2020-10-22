@@ -1,14 +1,13 @@
 use super::formatting;
 use irc::client::prelude::*;
 use regex::Regex;
-use std::collections::HashMap;
 use std::error;
 use std::fmt;
-use std::fs::File;
-use std::io::Read;
-use std::io::Write;
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
+
+mod segment;
+mod strava_irc_link;
 
 // TODO: Get rid of things relying on access_token, I think strava's more privacy oriented setup
 // ruins them and they are never used.
@@ -16,13 +15,13 @@ use unicode_segmentation::UnicodeSegmentation;
 pub struct StravaHandler {
     access_token: Option<String>,
     segment_matcher: Regex,
-    irc_links: StravaIrcLink,
+    irc_links: strava_irc_link::StravaIrcLink,
 }
 
 impl StravaHandler {
     pub fn new(config: &Config) -> StravaHandler {
         let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
-        let irc_links = StravaIrcLink::from_file_or_new("irc_links.json");
+        let irc_links = strava_irc_link::StravaIrcLink::from_file_or_new("irc_links.json");
         match config.options.get("strava_access_token") {
             Some(access_token) => StravaHandler {
                 access_token: Some(access_token.clone()),
@@ -41,9 +40,9 @@ impl StravaHandler {
     }
 
     fn handle_segments(&self, msg: &str, access_token: &str) -> Option<String> {
-        for captures in self.segment_matcher.captures_iter(msg) {
+        if let Some(captures) = self.segment_matcher.captures(msg) {
             println!("{}", captures.get(1).unwrap().as_str());
-            let segment = Segment::fetch(captures.get(1).unwrap().as_str(), access_token);
+            let segment = segment::Segment::fetch(captures.get(1).unwrap().as_str(), access_token);
             return match segment {
                 Ok(segment) => Some(segment.to_string()),
                 Err(e) => {
@@ -59,6 +58,7 @@ impl StravaHandler {
         let first_seven: String = msg.graphemes(true).take(7).collect();
         first_seven.eq_ignore_ascii_case("!strava")
     }
+
     fn handle_club(&self, msg: &str, access_token: &str) -> Vec<String> {
         let mut result = vec![];
         let input: String = msg.graphemes(true).skip(7).collect();
@@ -110,7 +110,6 @@ impl super::Handler for StravaHandler {
                         client.send_privmsg(&channel, &reply).unwrap()
                     }
                 }
-                // TODO Matching a club's URL
             }
         }
     }
@@ -153,6 +152,7 @@ struct ClubLeaderboard {
     #[serde(default)]
     sorted_by: ClubLeaderboardSort,
 }
+
 impl ClubLeaderboard {
     fn fetch(id: &str, _access_token: &str) -> Result<ClubLeaderboard, reqwest::Error> {
         let url = format!("https://www.strava.com/clubs/{}/leaderboard", id);
@@ -187,18 +187,19 @@ impl ClubLeaderboard {
                 .sort_unstable_by_key(|a| -(1000.0 * a.elev_gain / a.distance) as i64),
         }
     }
-    fn override_names(&mut self, irc_links: &StravaIrcLink) {
+    fn override_names(&mut self, irc_links: &strava_irc_link::StravaIrcLink) {
         self.ranking.iter_mut().for_each(|athlete| {
             if let Some(nick) = irc_links.get_first_nick(athlete.strava_id) {
                 athlete.first_name = nick.to_owned()
             }
         })
     }
-    fn drop_ignored(&mut self, irc_links: &StravaIrcLink) {
+    fn drop_ignored(&mut self, irc_links: &strava_irc_link::StravaIrcLink) {
         self.ranking
             .retain(|athlete| !irc_links.is_ignored(athlete.strava_id));
     }
 }
+
 impl fmt::Display for ClubLeaderboard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ranking = self
@@ -212,6 +213,7 @@ impl fmt::Display for ClubLeaderboard {
         write!(f, "🏆{ranking}", ranking = ranking)
     }
 }
+
 #[derive(Deserialize, Debug)]
 struct ClubLeaderboardAthlete {
     #[serde(rename = "athlete_id")]
@@ -224,6 +226,7 @@ struct ClubLeaderboardAthlete {
     // Using for sorting (can I use it to get the pace/km number?)
     velocity: f64,
 }
+
 impl ClubLeaderboardAthlete {
     /// To prevent triggering people's highlights in IRC, add a zero width space after the first
     /// character. Possible problem: seems to screw up things at times in weechat used through
@@ -238,6 +241,7 @@ impl ClubLeaderboardAthlete {
         newname
     }
 }
+
 impl fmt::Display for ClubLeaderboardAthlete {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 1000.0).floor();
@@ -277,11 +281,13 @@ enum ClubLeaderboardSort {
     Pace,
     Slope,
 }
+
 impl Default for ClubLeaderboardSort {
     fn default() -> Self {
         ClubLeaderboardSort::Distance
     }
 }
+
 impl FromStr for ClubLeaderboardSort {
     type Err = ParseClubLeaderboardSortError;
 
@@ -298,8 +304,10 @@ impl FromStr for ClubLeaderboardSort {
         }
     }
 }
+
 #[derive(Debug, Clone)]
 struct ParseClubLeaderboardSortError;
+
 impl error::Error for ParseClubLeaderboardSortError {
     fn description(&self) -> &str {
         "Failed to parse sorting parameter."
@@ -308,54 +316,10 @@ impl error::Error for ParseClubLeaderboardSortError {
         None
     }
 }
+
 impl fmt::Display for ParseClubLeaderboardSortError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Failed to parse sorting parameter.")
-    }
-}
-
-#[derive(Deserialize, Debug)]
-struct Segment {
-    name: String,
-    activity_type: String,
-    distance: f64,
-    average_grade: f64,
-    effort_count: u32,
-    athlete_count: u32,
-    city: String,
-    // State can be null
-    state: Option<String>,
-    country: String,
-}
-impl Segment {
-    fn fetch(id: &str, access_token: &str) -> Result<Segment, reqwest::Error> {
-        let url = format!(
-            "https://www.strava.com/api/v3/segments/{}?access_token={}",
-            id, access_token
-        );
-        let mut req = reqwest::get(&url)?;
-        println!("{}", req.url());
-        req.json()
-    }
-}
-impl fmt::Display for Segment {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let distance = (self.distance / 100.0).floor() / 10.0;
-        let state = match self.state {
-            Some(ref s) => s,
-            None => "-",
-        };
-        write!(f,
-               "[STRAVA SEGMENT] \"{name}\", {activity_type} of {distance}km @ {grade}%. {effort_count} attempts by {athlete_count} athletes. Located in {city}, {state}, {country}.",
-                name = self.name,
-                activity_type = self.activity_type,
-                distance = distance,
-                grade = self.average_grade,
-                effort_count = self.effort_count,
-                athlete_count = self.athlete_count,
-                city = self.city,
-                state = state,
-                country = self.country)
     }
 }
 
@@ -368,129 +332,6 @@ fn format_time(seconds: u32) -> String {
         return format!("{}:{:02}", minutes, seconds);
     } else {
         return format!("{}:{:02}:{:02}", hours, minutes, seconds);
-    }
-}
-
-/// Link Strava user IDs to IRC nicks. This struct also provides the convenience functions to
-/// access things.
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct StravaIrcLink {
-    users: HashMap<u64, StravaIrcUser>,
-}
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct StravaIrcUser {
-    #[serde(default)]
-    nicks: Vec<String>,
-    #[serde(default)]
-    ignore: bool,
-}
-impl StravaIrcLink {
-    pub fn new() -> StravaIrcLink {
-        StravaIrcLink {
-            users: HashMap::new(),
-        }
-    }
-    pub fn from_file_or_new(filename: &str) -> StravaIrcLink {
-        StravaIrcLink::from_file(filename).unwrap_or_else(StravaIrcLink::new)
-    }
-
-    pub fn from_file(filename: &str) -> Option<StravaIrcLink> {
-        // This would be cleaner if we returned a Result<> instead of Option<>
-        // Could use ? macro then.
-        if let Ok(mut f) = File::open(filename) {
-            let mut buffer = String::new();
-            if f.read_to_string(&mut buffer).is_ok() {
-                match serde_json::from_str(&buffer) {
-                    Ok(parsed) => return Some(parsed),
-                    Err(e) => {
-                        eprintln!("Failed to parse StravaIrcLink: {}", e);
-                        return None;
-                    }
-                }
-            }
-        }
-        None
-    }
-    pub fn _to_file(&self, filename: &str) {
-        // TODO Need to handle failure here better
-        match File::create(filename) {
-            Ok(mut f) => {
-                if let Ok(serialized) = serde_json::to_string(self) {
-                    f.write_all(serialized.as_bytes()).unwrap();
-                }
-            }
-            Err(e) => panic!("Failed to save, {}", e),
-        }
-    }
-
-    pub fn _get_nicks(&self, strava_id: u64) -> Option<Vec<String>> {
-        let mut res = vec![];
-        for nick in &self.users.get(&strava_id)?.nicks {
-            res.push(nick.clone())
-        }
-        if self.users.get(&strava_id)?.nicks.is_empty() {
-            None
-        } else {
-            Some(res)
-        }
-    }
-    pub fn get_first_nick(&self, strava_id: u64) -> Option<String> {
-        let nicks = &self.users.get(&strava_id)?.nicks;
-        if self.users.get(&strava_id)?.nicks.is_empty() {
-            None
-        } else {
-            Some(nicks.get(0).unwrap().to_owned())
-        }
-    }
-
-    pub fn _get_strava_id(&self, nick: &str) -> Option<u64> {
-        let nick = nick.to_owned();
-        for (strava_id, user) in self.users.iter() {
-            if user.nicks.contains(&nick) {
-                return Some(strava_id.to_owned());
-            }
-        }
-        None
-    }
-
-    pub fn _insert_connection(&mut self, strava_id: u64, nick: &str) {
-        let owned_nick = nick.to_string();
-        if self.users.contains_key(&strava_id) {
-            let user = self.users.get_mut(&strava_id).unwrap();
-            if !user.nicks.contains(&owned_nick) {
-                user.nicks.push(owned_nick)
-            }
-        } else {
-            let new_user = StravaIrcUser {
-                nicks: vec![owned_nick],
-                ignore: false,
-            };
-            self.users.insert(strava_id, new_user);
-        }
-    }
-
-    pub fn _remove_nick(&mut self, nick: &str) {
-        let nick = nick.to_owned();
-        self.users.iter_mut().for_each(|(_strava_id, user)| {
-            if user.nicks.contains(&nick) {
-                // Update once https://github.com/rust-lang/rust/issues/40062 is stable and
-                // done.
-                user.nicks.retain(|n| n != &nick);
-            }
-        });
-        // Looping over it again, ugly
-        self.users.retain(|_strava_id, user| user.nicks.len() > 1);
-    }
-    pub fn _remove_strava_id(&mut self, strava_id: u64) {
-        self.users.retain(|id, _user| id != &strava_id);
-    }
-
-    /// Decide whether a certain user should be considered ignored.
-    pub fn is_ignored(&self, strava_id: u64) -> bool {
-        match self.users.get(&strava_id) {
-            None => true,
-            Some(user) => user.ignore,
-        }
     }
 }
 
@@ -515,50 +356,6 @@ mod tests {
         // This crashed the bot
         let input = "🏃🏃";
         assert!(!StravaHandler::match_club(input));
-    }
-
-    #[test]
-    fn strava_irc_link() {
-        let mut db = StravaIrcLink::new();
-        db._insert_connection(123, "ward");
-        let result = db._get_nicks(123);
-        assert!(result.is_some());
-        let result = result.unwrap();
-        assert_eq!(1, result.len());
-        assert_eq!("ward", result.get(0).unwrap());
-        db._insert_connection(123, "ward_");
-        db._insert_connection(234, "butler");
-        db._to_file("testresult.json");
-        let result = db._get_nicks(123);
-        assert!(result.is_some());
-        let result = result.unwrap();
-        assert_eq!("ward", result.get(0).unwrap());
-        assert_eq!("ward_", result.get(1).unwrap());
-        let result = db._get_nicks(234).unwrap();
-        assert_eq!("butler", result.get(0).unwrap());
-        assert_eq!(1, result.len());
-        db._remove_nick("butler");
-        assert!(db._get_nicks(234).is_none());
-        db._remove_strava_id(123);
-        assert!(db._get_strava_id("ward_").is_none());
-    }
-
-    #[test]
-    fn strava_irc_link_parse() {
-        let input = "{ \"users\":
-          {
-                \"1\": {
-                  \"nicks\": [\"ward\",\"ward_\"]
-                },
-                \"2\": {
-                  \"ignore\": true
-                }
-                }}";
-        let parsed: StravaIrcLink = serde_json::from_str(&input).unwrap();
-        assert!(parsed.is_ignored(2));
-        assert!(!parsed.is_ignored(1));
-        assert_eq!(parsed.get_first_nick(1).unwrap(), "ward");
-        assert!(parsed.get_first_nick(2).is_none());
     }
 
     #[test]
