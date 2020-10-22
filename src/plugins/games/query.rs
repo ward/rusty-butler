@@ -118,7 +118,7 @@ impl Parser {
                 parsing_competition = false;
                 country = Some(String::new());
             } else if part.eq_ignore_ascii_case("--competition") {
-                parsing_country = true;
+                parsing_country = false;
                 parsing_competition = true;
                 competition = Some(String::new());
             } else if part.eq_ignore_ascii_case("@today") {
@@ -231,6 +231,58 @@ mod tests {
         };
         let parser = Parser::new();
         let query = parser.from_message("--country San Marino");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_competition() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Europa League")),
+            competition: Some(String::from("Group K")),
+            time: QueryTime::Today,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("--country Europa League --competition Group K");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_competition_before_country() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Europa League")),
+            competition: Some(String::from("Group K")),
+            time: QueryTime::Today,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("--competition Group K --country Europa League");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_competition_no_country() {
+        let desired = Query {
+            query: vec![],
+            country: None,
+            competition: Some(String::from("Group K")),
+            time: QueryTime::Today,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("--competition Group K");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_shortcut_and_competition() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Europa League")),
+            competition: Some(String::from("Group K")),
+            time: QueryTime::Today,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("el --competition Group K");
         assert_eq!(desired, query);
     }
 
