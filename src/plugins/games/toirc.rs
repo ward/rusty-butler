@@ -1,5 +1,7 @@
 use chrono::prelude::*;
 
+/// Often I want the Display of a struct to be different from the way I want it to look on IRC.
+/// This trait scratches that itch.
 pub trait ToIrc {
     fn to_irc(&self) -> String;
 }

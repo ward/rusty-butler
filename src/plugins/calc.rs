@@ -1,6 +1,5 @@
 use irc::client::prelude::*;
 use regex::Regex;
-use rink;
 use std::fmt;
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
@@ -147,6 +146,11 @@ impl CalcHandler {
             }
         }
         None
+    }
+}
+impl Default for CalcHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

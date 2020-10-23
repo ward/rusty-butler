@@ -386,7 +386,7 @@ mod tests {
         };
         assert_eq!(
             athlete.to_string(),
-            "\u{2}w\u{200d}ard\u{f} 10k in 0h50 (5:00/k ↑100m 1.0%)"
+            "\u{2}w\u{200d}ard\u{f} 10k 0h50 5:00/k ↑100m 1.0%"
         );
         let leaderboard = ClubLeaderboard {
             ranking: vec![athlete],
@@ -394,7 +394,7 @@ mod tests {
         };
         assert_eq!(
             leaderboard.to_string(),
-            "🏆 1. \u{2}w\u{200d}ard\u{f} 10k in 0h50 (5:00/k ↑100m 1.0%)"
+            "🏆 1. \u{2}w\u{200d}ard\u{f} 10k 0h50 5:00/k ↑100m 1.0%"
         );
     }
 }
