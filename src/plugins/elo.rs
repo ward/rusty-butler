@@ -112,6 +112,29 @@ impl super::MutableHandler for EloHandler {
     }
 }
 
+impl super::help::Help for EloHandler {
+    fn name(&self) -> String {
+        String::from("elo")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!elo",
+            "Show the top few teams ranked by clubelo.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!elo QUERY",
+            "Search for teams matching QUERY and list their clubelo.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!elo POSITION",
+            "Search for the team in POSITIONth place and list their clubelo.",
+        ));
+        result
+    }
+}
+
 #[derive(Debug)]
 struct EloRanking {
     ranking: Vec<EloEntry>,

@@ -196,6 +196,40 @@ impl super::MutableHandler for CalcHandler {
     }
 }
 
+impl super::help::Help for CalcHandler {
+    fn name(&self) -> String {
+        String::from("calc")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!calc CALCULATION",
+            "Performs given CALCULATION",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!c NUMBER / !f NUMBER",
+            "Convert fahrenheit to celsius and vice versa",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!km NUMBER / !mi NUMBER",
+            "Convert miles to kilometre and vice versa",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!kg NUMBER / !lbs NUMBER",
+            "Convert pound to kilogram and vice versa",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!cm NUMBER'NUMBER / !ft NUMBER",
+            "Convert feet and inches to centimetre and vice versa",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!pace NUMBER:NUMBER",
+            "Converts pace per km to pace per mile and vice versa",
+        ));
+        result
+    }
+}
 /// There are some simple shortcuts that we want to handle in a generic way. Consider things like
 /// !km 26 or !c 100 or !mi 10000 metre. To do so, we make the following assumptions about these
 /// shortcuts:

@@ -168,3 +168,46 @@ impl Default for GamesHandler {
         Self::new()
     }
 }
+
+impl super::help::Help for GamesHandler {
+    fn name(&self) -> String {
+        String::from("games")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!games",
+            "List countries for which there is information today.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games QUERY",
+            "Search for games matching query. Optionally combine with @modifiers or shortcuts",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @yday",
+            "Match yesterday's games.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @today",
+            "Match today's games.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @tomorrow",
+            "Match tomorrow's games.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @past",
+            "Match games which are finished.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @live",
+            "Match games currently ongoing.",
+        ));
+        result.push(super::help::HelpEntry::new(
+            "!games @soon",
+            "Match games yet to start.",
+        ));
+        result
+    }
+}

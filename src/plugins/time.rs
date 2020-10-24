@@ -22,7 +22,7 @@ impl super::Handler for TimeHandler {
             if TimeHandler::matcher(message) {
                 let now: DateTime<Utc> = Utc::now();
                 let now = now
-                    .format("It is currently %A %d %B %Y %H:%M:%S UTC")
+                    .format("It is currently %A %d %B %Y %H:%M:%S UTC.")
                     .to_string();
                 let now = if message.eq_ignore_ascii_case("!gmt") {
                     String::from("Lol GMT, get with the times, grandpa. ") + &now
@@ -32,5 +32,21 @@ impl super::Handler for TimeHandler {
                 client.send_privmsg(&channel, &now).unwrap();
             }
         }
+    }
+}
+
+impl super::help::Help for TimeHandler {
+    fn name(&self) -> String {
+        String::from("time")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!time / !utc / !now",
+            "Show the current time in UTC",
+        ));
+        result.push(super::help::HelpEntry::new("!gmt", "GMT is deprecated."));
+        result
     }
 }

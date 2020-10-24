@@ -5,10 +5,10 @@ pub mod plugins {
     use irc::client::prelude::*;
     use unicode_segmentation::UnicodeSegmentation;
 
-    pub trait Handler {
+    pub trait Handler: help::Help {
         fn handle(&self, client: &Client, msg: &Message);
     }
-    pub trait MutableHandler {
+    pub trait MutableHandler: help::Help {
         fn handle(&mut self, client: &Client, msg: &Message);
     }
 

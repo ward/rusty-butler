@@ -93,3 +93,18 @@ impl super::MutableHandler for LastSeenHandler {
         self.log(msg);
     }
 }
+
+impl super::help::Help for LastSeenHandler {
+    fn name(&self) -> String {
+        String::from("seen")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!seen NICK",
+            "Check what I saw NICK most recently do.",
+        ));
+        result
+    }
+}

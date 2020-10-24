@@ -115,6 +115,21 @@ impl super::Handler for StravaHandler {
     }
 }
 
+impl super::help::Help for StravaHandler {
+    fn name(&self) -> String {
+        String::from("strava")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        let mut result = vec![];
+        result.push(super::help::HelpEntry::new(
+            "!strava (distance|slope|elevation|pace|time)",
+            "Show the Strava freenode_running leaderboard for the given metric. Defaults to distance if none given.",
+        ));
+        result
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct Club {
     name: String,

@@ -71,3 +71,13 @@ impl super::MutableHandler for NicknameHandler {
         self.handle_nickserv(client, msg);
     }
 }
+
+impl super::help::Help for NicknameHandler {
+    fn name(&self) -> String {
+        String::from("nickinternal")
+    }
+
+    fn help(&self) -> Vec<super::help::HelpEntry> {
+        vec![]
+    }
+}
