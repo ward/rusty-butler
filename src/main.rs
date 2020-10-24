@@ -11,7 +11,7 @@ use clap::{App, Arg};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("rusty-butler")
-        .version("0.2.0")
+        .version("0.3.0")
         .author("Ward Muylaert")
         .about("An IRC bot. The world needed more of those.")
         .arg(
