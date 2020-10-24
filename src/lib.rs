@@ -3,6 +3,7 @@ extern crate serde_derive;
 
 pub mod plugins {
     use irc::client::prelude::*;
+    use unicode_segmentation::UnicodeSegmentation;
 
     pub trait Handler {
         fn handle(&self, client: &Client, msg: &Message);
@@ -15,6 +16,37 @@ pub mod plugins {
         match msg.command {
             Command::PING(_, _) | Command::PONG(_, _) => (),
             _ => print!("{}", msg),
+        }
+    }
+
+    fn print_sent_privmsg(msg: &str) {
+        println!("SENT: {}", msg);
+    }
+
+    /// Sends a message to a given target. If the message is longer than a certain length, the message
+    /// is split up (unicode safe) and individual messages are sent separately.
+    ///
+    /// TODO: Delay between messages and/or maximum number of messages. (Global delay eventually?)
+    ///
+    /// TODO: Length is currently hardcoded, ideally this bases itself on what the IRC server can
+    /// handle.
+    fn send_privmsg(client: &irc::client::Client, target: &str, message: &str) {
+        // If there is no need to split up, just send immediately
+        if message.len() < 400 {
+            match client.send_privmsg(target, message) {
+                Ok(_) => print_sent_privmsg(message),
+                Err(e) => eprintln!("Error sending message {}. {}", message, e),
+            }
+        } else {
+            // Otherwise, split at safe points and loop over
+            let message: Vec<_> = message.graphemes(true).collect();
+            for chunk in message.chunks(400) {
+                let to_send: String = chunk.concat();
+                match client.send_privmsg(target, &to_send) {
+                    Ok(_) => print_sent_privmsg(&to_send),
+                    Err(e) => eprintln!("Error sending message {}. {}", &to_send, e),
+                }
+            }
         }
     }
 
@@ -31,6 +63,8 @@ pub mod plugins {
     pub mod elo;
 
     pub mod games;
+
+    pub mod help;
 
     pub mod formatting {
         use std::fmt;

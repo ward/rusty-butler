@@ -3,36 +3,12 @@ use chrono::Duration;
 use football::*;
 use irc::client::prelude::*;
 use regex::Regex;
-use unicode_segmentation::UnicodeSegmentation;
-
 mod query;
 mod toirc;
+use super::send_privmsg;
 use toirc::ToIrc;
 
 const MAX_NUMBER_OF_GAMES: usize = 20;
-
-/// Sends a message to a given target. If the message is longer than a certain length, the message
-/// is split up (unicode safe) and individual messages are sent separately.
-///
-/// This is being tested here. If it works well enough, I probably should move it up to lib.rs.
-///
-/// TODO: Delay between messages and/or maximum number of messages. (Global delay eventually?)
-///
-/// TODO: Length is currently hardcoded, ideally this bases itself on what the IRC server can
-/// handle.
-fn send_privmsg(client: &irc::client::Client, target: &str, message: &str) {
-    // If there is no need to split up, just send immediately
-    if message.len() < 400 {
-        client.send_privmsg(target, message).unwrap();
-    } else {
-        // Otherwise, split at safe points and loop over
-        let message: Vec<_> = message.graphemes(true).collect();
-        for chunk in message.chunks(400) {
-            let to_send: String = chunk.concat();
-            client.send_privmsg(target, to_send).unwrap();
-        }
-    }
-}
 
 pub struct GamesHandler {
     games: Football,
