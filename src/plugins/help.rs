@@ -10,6 +10,9 @@ use std::collections::HashMap;
 pub trait Help {
     fn help(&self) -> Vec<HelpEntry>;
     fn name(&self) -> String;
+    // TODO
+    // fn version(&self) -> String;
+    // (Or a special type for version?)
 }
 
 pub struct HelpEntry {

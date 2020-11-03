@@ -64,6 +64,8 @@ pub mod plugins {
 
     pub mod games;
 
+    pub mod untappd;
+
     pub mod help;
 
     pub mod formatting {
