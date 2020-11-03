@@ -106,9 +106,10 @@ impl BeerResult {
 
 impl Beer {
     fn url(&self) -> String {
+        // The slug does not matter, only the id does. So we make it something short
         format!(
-            "https://untappd.com/b/{slug}/{id}",
-            slug = self.slug,
+            "https://untappd.com/b/eer/{id}",
+            // slug = self.slug,
             id = self.id,
         )
     }
