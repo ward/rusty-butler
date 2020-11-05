@@ -17,8 +17,14 @@ pub fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<BeerResu
         .header(reqwest::header::USER_AGENT, USER_AGENT);
     // TODO Keep track of failure information to pass it to the user
     match req.send() {
-        Ok(mut resp) => match resp.json::<UntappdSearch>() {
-            Ok(untappd_search) => untappd_search.response.beers.items,
+        Ok(mut resp) => match resp.json::<UntappdApiReply>() {
+            Ok(untappd_search) => match untappd_search.response {
+                Some(response) => response.beers.items,
+                None => {
+                    eprintln!("Received error from Untappd API: {:?}", untappd_search);
+                    vec![]
+                }
+            },
             Err(e) => {
                 eprintln!("{}", e);
                 vec![]
@@ -36,29 +42,40 @@ fn sanitise_query(query: &str) -> String {
     query.replace(|ch: char| !ch.is_alphanumeric(), " ")
 }
 
-#[derive(Deserialize, Debug)]
-struct UntappdSearch {
-    response: UntappdSearchResponse,
+/// Every API call results in the same root structure
+#[derive(Deserialize, Debug, PartialEq)]
+struct UntappdApiReply {
+    meta: UntappdApiMeta,
+    /// A response is only present when the API call is a success
+    response: Option<UntappdSearchResponse>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
+struct UntappdApiMeta {
+    code: u16,
+    error_detail: Option<String>,
+    error_type: Option<String>,
+    developer_friendly: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
 struct UntappdSearchResponse {
     beers: UntappdSearchResponseBeers,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 struct UntappdSearchResponseBeers {
     items: Vec<BeerResult>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct BeerResult {
     checkin_count: u64,
     beer: Beer,
     brewery: Brewery,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Beer {
     #[serde(rename = "bid")]
     id: u64,
@@ -76,7 +93,7 @@ pub struct Beer {
     style: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Brewery {
     #[serde(rename = "brewery_id")]
     id: u64,
@@ -121,10 +138,70 @@ mod tests {
 
     #[test]
     fn parse_untappd_response() {
+        let parsed_response = UntappdApiReply {
+            meta: UntappdApiMeta {
+                code: 200,
+                error_detail: None,
+                error_type: None,
+                developer_friendly: None,
+            },
+            response: Some(
+                          UntappdSearchResponse {
+                              beers: UntappdSearchResponseBeers {
+                                  items: vec![
+                                      BeerResult {
+                                          checkin_count: 295058,
+                                          beer: Beer {
+                                              id: 6766,
+                                              name: String::from("Trappistes Rochefort 10"),
+                                              abv: 11.3,
+                                              slug: String::from("abbaye-notredame-de-saintremy-trappistes-rochefort-10"),
+                                              ibu: 27,
+                                              description: String::from("Dominant impressions of latte coffee with powerful chocolate aromas in the nose. The alcohol esters are enveloped with hints of autumn wood, citrus zest (orange, lemon) and freshly baked biscuits. The initial taste is sweetly sinful. Beer and chocolate trapped into one single glass, a liquid milky draught with a backbone of bitter malt. The alcohol warms the throat and, in the finish, you will pick up traces of cloves, citrus, orange and mocha.\r\nThe heaviest of the Rochefort beers, the 10 is a quadrupel style beer and can be recognized by its blue label."),
+                                              style: String::from("Belgian Quadrupel"),
+                                          },
+                                          brewery: Brewery {
+                                              id: 1650,
+                                              name: String::from("Abbaye Notre-Dame de Saint-Rémy"),
+                                              slug: String::from("abbaye-notre-dame-de-saint-remy"),
+                                              country: String::from("Belgium"),
+                                              brewery_type: String::from("Regional Brewery"),
+                                          },
+                                      },
+                                  ]
+                              }
+                          }
+            )
+        };
         let response = include_str!("untappd.rochefort.json");
-        let response: UntappdSearch = serde_json::from_str(&response).unwrap();
+        let response: UntappdApiReply = serde_json::from_str(&response).unwrap();
         println!("{:#?}", response);
-        // TODO: Assert that it matches the data from the json
+        assert_eq!(
+            response.response.unwrap().beers.items[0],
+            parsed_response.response.unwrap().beers.items[0]
+        );
+        assert_eq!(response.meta, parsed_response.meta);
+    }
+
+    #[test]
+    fn failed_untappd_api_reply() {
+        let parsed_reponse = UntappdApiReply {
+            meta: UntappdApiMeta {
+                code: 500,
+                error_detail: Some(String::from(
+                    "The user has not authorized this application or the token is invalid.",
+                )),
+                error_type: Some(String::from("invalid_auth")),
+                developer_friendly: Some(String::from(
+                    "The user has not authorized this application or the token is invalid.",
+                )),
+            },
+            response: None,
+        };
+        let response = include_str!("untappd.api.failure.json");
+        let response: UntappdApiReply = serde_json::from_str(&response).unwrap();
+        println!("{:#?}", response);
+        assert_eq!(parsed_reponse, response);
     }
 
     #[test]

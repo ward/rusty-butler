@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "code": 500,
+    "error_detail": "The user has not authorized this application or the token is invalid.",
+    "error_type": "invalid_auth",
+    "developer_friendly": "The user has not authorized this application or the token is invalid.",
+    "response_time": {
+      "time": 0,
+      "measure": "seconds"
+    }
+  }
+}
