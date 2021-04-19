@@ -66,6 +66,8 @@ pub mod plugins {
 
     pub mod untappd;
 
+    pub mod simple_reply;
+
     pub mod help;
 
     pub mod formatting {

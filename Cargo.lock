@@ -1480,6 +1480,7 @@ dependencies = [
  "football",
  "futures 0.3.12",
  "irc",
+ "rand 0.8.3",
  "regex 1.4.3",
  "reqwest",
  "rink",

@@ -39,10 +39,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&time_handler);
     let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
     help_handler.add_help(&untappd_handler);
+    let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new();
+    help_handler.add_help(&simple_reply_handler);
     let mut handlers: Vec<Box<dyn Handler>> = vec![];
     handlers.push(Box::new(strava_handler));
     handlers.push(Box::new(time_handler));
     handlers.push(Box::new(untappd_handler));
+    handlers.push(Box::new(simple_reply_handler));
 
     // Mutable handlers
     let nickname_handler = plugins::nickname::NicknameHandler::new(&config_for_handlers);
