@@ -1,9 +1,0 @@
-nickname = "rusty-butler"
-alt_nicks = ["rusty-butler_", "rusty-butler__"]
-username = "rusty-butler"
-realname = "IRC butler in Rust"
-server = "chat.freenode.net"
-port = 6697
-use_ssl = true
-encoding = "UTF-8"
-channels = ["#irc-butler"]

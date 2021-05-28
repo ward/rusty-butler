@@ -1,0 +1,13 @@
+nickname = "test-butler"
+alt_nicks = ["test-butler_", "test-butler__"]
+username = "rusty-butler"
+realname = "IRC butler in Rust"
+server = "irc.favouritenetwork.com"
+port = 6697
+use_ssl = true
+encoding = "UTF-8"
+channels = ["#just-a-channel"]
+ping_timeout = 60
+
+[options]
+strava_access_token = "youraccesstoken"
