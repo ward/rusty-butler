@@ -68,6 +68,8 @@ pub mod plugins {
 
     pub mod simple_reply;
 
+    pub mod leagueranking;
+
     pub mod help;
 
     pub mod config;
