@@ -202,31 +202,33 @@ impl super::help::Help for CalcHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
-            "!calc CALCULATION",
-            "Performs given CALCULATION",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!c NUMBER / !f NUMBER",
-            "Convert fahrenheit to celsius and vice versa",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!km NUMBER / !mi NUMBER",
-            "Convert miles to kilometre and vice versa",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!kg NUMBER / !lbs NUMBER",
-            "Convert pound to kilogram and vice versa",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!cm NUMBER'NUMBER / !ft NUMBER",
-            "Convert feet and inches to centimetre and vice versa",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!pace NUMBER:NUMBER",
-            "Converts pace per km to pace per mile and vice versa",
-        ));
+        let result = vec![
+            super::help::HelpEntry::new("!calc CALCULATION", "Performs given CALCULATION"),
+            super::help::HelpEntry::new(
+                "!c NUMBER / !f NUMBER",
+                "Convert fahrenheit to celsius and vice versa",
+            ),
+            super::help::HelpEntry::new(
+                "!km NUMBER / !mi NUMBER",
+                "Convert miles to kilometre and vice versa",
+            ),
+            super::help::HelpEntry::new(
+                "!kg NUMBER / !lbs NUMBER",
+                "Convert pound to kilogram and vice versa",
+            ),
+            super::help::HelpEntry::new(
+                "!cm NUMBER'NUMBER / !ft NUMBER",
+                "Convert feet and inches to centimetre and vice versa",
+            ),
+            super::help::HelpEntry::new(
+                "!pace NUMBER:NUMBER",
+                "Converts pace per km to pace per mile and vice versa",
+            ),
+            super::help::HelpEntry::new(
+                "!calc NUMBER UNIT to UNIT",
+                "Converts number. No spaces in UNIT. 'to UNIT' optional.",
+            ),
+        ];
         result
     }
 }
