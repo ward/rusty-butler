@@ -70,6 +70,8 @@ pub mod plugins {
 
     pub mod help;
 
+    pub mod config;
+
     pub mod formatting {
         use std::fmt;
 
