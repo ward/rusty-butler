@@ -24,3 +24,8 @@ Follow some best practices to keep the code clean:
   https://github.com/kbknapp/cargo-outdated. Currently install is via `cargo
   install cargo-outdated`.
 - Run `cargo test`.
+
+# To Do/Ideas
+
+- Basic query parsing should probably be centralised, always the same idea.
+- `plugins.toml` should let you decide which plugins to enable.
