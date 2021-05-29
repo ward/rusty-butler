@@ -58,12 +58,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&elo_handler);
     let games_handler = plugins::games::GamesHandler::new();
     help_handler.add_help(&games_handler);
+    let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
+    help_handler.add_help(&ranking_handler);
     let mut mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![];
     mutable_handlers.push(Mutex::new(Box::new(nickname_handler)));
     mutable_handlers.push(Mutex::new(Box::new(calc_handler)));
     mutable_handlers.push(Mutex::new(Box::new(last_seen_handler)));
     mutable_handlers.push(Mutex::new(Box::new(elo_handler)));
     mutable_handlers.push(Mutex::new(Box::new(games_handler)));
+    mutable_handlers.push(Mutex::new(Box::new(ranking_handler)));
 
     // Could not move help_handler before
     handlers.push(Box::new(help_handler));
