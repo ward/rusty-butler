@@ -2,13 +2,15 @@ use scraper::Html;
 use scraper::Selector;
 use std::collections::HashMap;
 
-// TODO Should League and Competition have one Trait as interface?
+const CACHE_DURATION: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+// TODO Should League and Competition (Group) have one Trait as interface? Lots of code repetition atm
 
 #[derive(Debug)]
 pub struct League {
     ranking: Vec<RankingEntry>,
     url: String,
-    // TODO: Some caching timer
+    last_updated: std::time::Instant,
 }
 
 impl League {
@@ -16,7 +18,70 @@ impl League {
         Self {
             url,
             ranking: vec![],
+            last_updated: std::time::Instant::now()
+                .checked_sub(CACHE_DURATION)
+                .unwrap(),
         }
+    }
+
+    /// Updates if last update is older than CACHE_DURATION
+    pub fn update(&mut self) {
+        if self.needs_update() {
+            println!("Fetching data from {}", self.url);
+            self.last_updated = std::time::Instant::now();
+            if let Ok(mut resp) = reqwest::get(&self.url) {
+                if let Ok(content) = resp.text() {
+                    self.ranking = League::parse_ranking(&content);
+                }
+            }
+        }
+    }
+
+    /// True if last update is older than CACHE_DURATION
+    fn needs_update(&self) -> bool {
+        let now = std::time::Instant::now();
+        let passed_time = now.duration_since(self.last_updated);
+        passed_time > CACHE_DURATION
+    }
+
+    fn parse_ranking(content: &str) -> Vec<RankingEntry> {
+        let doc = Html::parse_document(content);
+        let selector =
+            Selector::parse("table.leaguetable.sortable.table.detailed-table tbody tr").unwrap();
+        let mut ranking = vec![];
+        for row in doc.select(&selector) {
+            ranking.push(RankingEntry::parse_from_row(row));
+        }
+        ranking
+    }
+
+    /// Gets up to 6 teams around a certain position
+    pub fn get_ranking_around(&self, idx: usize) -> &[RankingEntry] {
+        let length = self.ranking.len();
+        let range = if length <= 6 {
+            0..length
+        } else if idx <= 3 {
+            0..6
+        } else if idx >= length - 2 {
+            (length - 6)..length
+        } else {
+            (idx - 3)..(idx + 3)
+        };
+        &self.ranking[range]
+    }
+
+    /// Returns 0 indexed position.
+    /// Defaults to 0 if nothing found.
+    /// Yes that makes little sense but we're only using this in one place.
+    pub fn find_team_position(&self, needle: &str) -> u8 {
+        let needle = needle.to_lowercase();
+        for rank in &self.ranking {
+            let team_name = rank.team.to_lowercase();
+            if team_name.matches(&needle).count() > 0 {
+                return rank.rank - 1;
+            }
+        }
+        0
     }
 }
 
@@ -33,14 +98,18 @@ impl Competition {
         }
         Self { groups }
     }
+
+    pub fn get_group_mut(&mut self, group_id: &str) -> Option<&mut Group> {
+        self.groups.get_mut(group_id)
+    }
 }
 
 /// When created, only stores the source url. Will not fetch the rankings till asked to do so.
 #[derive(Debug)]
-struct Group {
+pub struct Group {
     ranking: Vec<RankingEntry>,
     url: String,
-    // TODO: Some caching timer
+    last_updated: std::time::Instant,
 }
 
 impl Group {
@@ -48,15 +117,30 @@ impl Group {
         Self {
             url,
             ranking: vec![],
+            last_updated: std::time::Instant::now()
+                .checked_sub(CACHE_DURATION)
+                .unwrap(),
         }
     }
 
-    fn update(&mut self) {
-        if let Ok(mut resp) = reqwest::get(&self.url) {
-            if let Ok(content) = resp.text() {
-                self.ranking = Group::parse_ranking(&content);
+    /// Updates if last update is older than CACHE_DURATION
+    pub fn update(&mut self) {
+        if self.needs_update() {
+            println!("Fetching data from {}", self.url);
+            self.last_updated = std::time::Instant::now();
+            if let Ok(mut resp) = reqwest::get(&self.url) {
+                if let Ok(content) = resp.text() {
+                    self.ranking = Group::parse_ranking(&content);
+                }
             }
         }
+    }
+
+    /// True if last update is older than CACHE_DURATION
+    fn needs_update(&self) -> bool {
+        let now = std::time::Instant::now();
+        let passed_time = now.duration_since(self.last_updated);
+        passed_time > CACHE_DURATION
     }
 
     fn parse_ranking(content: &str) -> Vec<RankingEntry> {
@@ -69,10 +153,14 @@ impl Group {
         }
         ranking
     }
+
+    pub fn get_ranking(&self) -> &Vec<RankingEntry> {
+        &self.ranking
+    }
 }
 
 #[derive(Debug)]
-struct RankingEntry {
+pub struct RankingEntry {
     rank: u8,
     team: String,
     played: u8,
@@ -176,6 +264,23 @@ impl RankingEntry {
             gd,
             points,
         }
+    }
+}
+
+impl std::fmt::Display for RankingEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{rank}. {team} {points}pts {win}-{draw}-{lose} {gf}-{ga}",
+            rank = self.rank,
+            team = self.team,
+            points = self.points,
+            win = self.win,
+            draw = self.draw,
+            lose = self.lose,
+            gf = self.gf,
+            ga = self.ga
+        )
     }
 }
 
