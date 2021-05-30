@@ -31,7 +31,7 @@ impl League {
             self.last_updated = std::time::Instant::now();
             if let Ok(mut resp) = reqwest::get(&self.url) {
                 if let Ok(content) = resp.text() {
-                    self.ranking = League::parse_ranking(&content);
+                    self.ranking = parse_ranking(&content);
                 }
             }
         }
@@ -42,17 +42,6 @@ impl League {
         let now = std::time::Instant::now();
         let passed_time = now.duration_since(self.last_updated);
         passed_time > CACHE_DURATION
-    }
-
-    fn parse_ranking(content: &str) -> Vec<RankingEntry> {
-        let doc = Html::parse_document(content);
-        let selector =
-            Selector::parse("table.leaguetable.sortable.table.detailed-table tbody tr").unwrap();
-        let mut ranking = vec![];
-        for row in doc.select(&selector) {
-            ranking.push(RankingEntry::parse_from_row(row));
-        }
-        ranking
     }
 
     /// Gets up to 6 teams around a certain position
@@ -82,6 +71,33 @@ impl League {
             }
         }
         0
+    }
+}
+
+/// Extracted so both League and Group can use it. Should this be some trait?
+/// Returns empty Vec if an error is encountered
+///
+/// TODO Proper Result returning?
+fn parse_ranking(content: &str) -> Vec<RankingEntry> {
+    let doc = Html::parse_document(content);
+    match Selector::parse("table.leaguetable.sortable.table.detailed-table tbody tr") {
+        Ok(selector) => {
+            let mut ranking = vec![];
+            for row in doc.select(&selector) {
+                match RankingEntry::parse_from_row(row) {
+                    Some(entry) => ranking.push(entry),
+                    None => {
+                        eprintln!("Failed to parse a ranking row, returning empty vector");
+                        return vec![];
+                    }
+                }
+            }
+            ranking
+        }
+        Err(e) => {
+            eprintln!("Failed to parse content. {:?}", e);
+            vec![]
+        }
     }
 }
 
@@ -130,7 +146,7 @@ impl Group {
             self.last_updated = std::time::Instant::now();
             if let Ok(mut resp) = reqwest::get(&self.url) {
                 if let Ok(content) = resp.text() {
-                    self.ranking = Group::parse_ranking(&content);
+                    self.ranking = parse_ranking(&content);
                 }
             }
         }
@@ -141,17 +157,6 @@ impl Group {
         let now = std::time::Instant::now();
         let passed_time = now.duration_since(self.last_updated);
         passed_time > CACHE_DURATION
-    }
-
-    fn parse_ranking(content: &str) -> Vec<RankingEntry> {
-        let doc = Html::parse_document(content);
-        let selector =
-            Selector::parse("table.leaguetable.sortable.table.detailed-table tbody tr").unwrap();
-        let mut ranking = vec![];
-        for row in doc.select(&selector) {
-            ranking.push(RankingEntry::parse_from_row(row));
-        }
-        ranking
     }
 
     pub fn get_ranking(&self) -> &Vec<RankingEntry> {
@@ -174,85 +179,24 @@ pub struct RankingEntry {
 }
 
 impl RankingEntry {
-    fn parse_from_row(row: scraper::ElementRef) -> RankingEntry {
-        let cell_selector = Selector::parse("td").unwrap();
-        let mut cells = row.select(&cell_selector);
-        // Need to clean this up still... evidently.
-        let rank = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let team = cells.nth(1).unwrap().text().next().unwrap().to_owned();
-        let played = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let win = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let draw = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let lose = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let gf = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let ga = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let gd = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let points = cells
-            .next()
-            .unwrap()
-            .text()
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap();
+    fn parse_from_row(row: scraper::ElementRef) -> Option<RankingEntry> {
+        // TODO Make this return a Result<> instead of Option<>
 
-        RankingEntry {
+        let cell_selector = Selector::parse("td").ok()?;
+        let mut cells = row.select(&cell_selector);
+        // Need to clean this up, too much repetition
+        let rank = cells.next()?.text().next()?.parse().ok()?;
+        let team = cells.nth(1)?.text().next()?.to_owned();
+        let played = cells.next()?.text().next()?.parse().ok()?;
+        let win = cells.next()?.text().next()?.parse().ok()?;
+        let draw = cells.next()?.text().next()?.parse().ok()?;
+        let lose = cells.next()?.text().next()?.parse().ok()?;
+        let gf = cells.next()?.text().next()?.parse().ok()?;
+        let ga = cells.next()?.text().next()?.parse().ok()?;
+        let gd = cells.next()?.text().next()?.parse().ok()?;
+        let points = cells.next()?.text().next()?.parse().ok()?;
+
+        Some(RankingEntry {
             rank,
             team,
             played,
@@ -263,7 +207,7 @@ impl RankingEntry {
             ga,
             gd,
             points,
-        }
+        })
     }
 }
 
@@ -291,14 +235,14 @@ mod tests {
     #[test]
     fn parse_euro_group_b() {
         let content = include_str!("euro2021-group-b.html");
-        println!("{:#?}", Group::parse_ranking(content));
+        println!("{:#?}", parse_ranking(content));
         assert!(false);
     }
 
     #[test]
     fn parse_belgian_playoff() {
         let content = include_str!("be2021-playoffs.html");
-        println!("{:#?}", Group::parse_ranking(content));
+        println!("{:#?}", parse_ranking(content));
         assert!(false);
     }
 }

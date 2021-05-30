@@ -65,9 +65,15 @@ impl super::MutableHandler for LeagueRankingHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             let mut message_parts = message.split(' ');
-            let rank_command = message_parts
-                .next()
-                .expect("Splitting should have one part");
+            let rank_command = message_parts.next();
+            if rank_command.is_none() {
+                eprintln!(
+                    "Tried to split message_parts and no first part found?? {}",
+                    message
+                );
+                return;
+            }
+            let rank_command = rank_command.expect("Unreachable due to previous check");
             if !rank_command.eq_ignore_ascii_case("!rank") {
                 return;
             }

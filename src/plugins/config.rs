@@ -8,8 +8,9 @@ pub struct Config {
 impl Config {
     /// Parses the plugins.toml file into configuration for our plugins.
     pub fn new() -> Self {
-        let contents = std::fs::read_to_string("plugins.toml").unwrap();
-        toml::from_str(&contents).unwrap()
+        let contents =
+            std::fs::read_to_string("plugins.toml").expect("No 'plugins.toml' file found.");
+        toml::from_str(&contents).expect("Failed to parse 'plugins.toml'.")
     }
 }
 
