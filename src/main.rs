@@ -27,8 +27,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load(config_file_name).expect("Failed to load config");
     let config_for_handlers = Config::load(config_file_name).expect("Failed to load config");
 
-    let mut client = Client::from_config(config).await?;
-    client.identify().expect("Failed to identify");
+    let mut client = Client::from_config(config.clone()).await?;
+    // Asks server if it can do SASL, once acknowledged (see later, we can ask to authenticate with
+    // it).
+    client.send_cap_req(&[Capability::Sasl])?;
+    // Identify with SASL instead of nickserv password sending
+    // Need to set client_cert_path and client_cert_pass in bot.toml
+    // The cert needs to be p12 format. Probably need to set use_ssl and use_tls to true too
+    // client.identify().expect("Failed to identify");
+    // .identify() would send these for us, so just emulate that
+    client.send(Command::NICK(config.nickname()?.to_string()))?;
+    client.send(Command::USER(
+        config.username().to_string(),
+        "0".to_owned(),
+        config.real_name().to_string(),
+    ))?;
     let mut stream = client.stream()?;
 
     // Non mutable handlers
@@ -75,6 +88,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // perhaps not worth the effort. Only one will _truly_ react to a message.
     while let Some(irc_msg) = stream.next().await.transpose()? {
         plugins::print_msg(&irc_msg);
+
+        // Should I move this SASL stuff to its own module?
+        // Cleaner still would be seeing how I can get it into upstream.
+        match irc_msg.command {
+            Command::CAP(_, ref subcommand, _, _) => {
+                if subcommand.to_str() == "ACK" {
+                    println!("Recieved ack for sasl");
+                    // client.send_sasl_plain()?;
+                    client.send_sasl_external()?;
+                }
+            }
+            Command::AUTHENTICATE(_) => {
+                println!("Got signal to continue authenticating");
+                client.send(Command::AUTHENTICATE(String::from('+')))?;
+                // client.send(Command::AUTHENTICATE(base64::encode(format!(
+                //     "{}\x00{}\x00{}",
+                //     config.nickname()?.to_string(),
+                //     config.nickname()?.to_string(),
+                //     config.password().to_string()
+                // ))))?;
+                client.send(Command::CAP(None, "END".parse()?, None, None))?;
+            }
+            Command::Response(code, _) => {
+                if code == Response::RPL_SASLSUCCESS {
+                    println!("Successfully authenticated");
+                    client.send(Command::CAP(None, "END".parse()?, None, None))?;
+                }
+            }
+            _ => {}
+        };
+
         for handler in &handlers {
             handler.handle(&client, &irc_msg);
         }
