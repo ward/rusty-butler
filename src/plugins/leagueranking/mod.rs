@@ -158,15 +158,3 @@ impl Default for LeagueRankingHandler {
         Self::new()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new() {
-        let handler = LeagueRankingHandler::new();
-        println!("{:#?}", handler);
-        assert!(false);
-    }
-}

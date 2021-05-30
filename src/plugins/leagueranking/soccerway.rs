@@ -235,14 +235,42 @@ mod tests {
     #[test]
     fn parse_euro_group_b() {
         let content = include_str!("euro2021-group-b.html");
-        println!("{:#?}", parse_ranking(content));
-        assert!(false);
+        let ranking = parse_ranking(content);
+        let belgium = RankingEntry {
+            rank: 1,
+            team: String::from("Belgium"),
+            played: 0,
+            win: 0,
+            draw: 0,
+            lose: 0,
+            gf: 0,
+            ga: 0,
+            gd: 0,
+            points: 0,
+        };
+        assert_eq!(ranking[0].rank, belgium.rank);
+        assert_eq!(ranking[0].team, belgium.team);
+        assert_eq!(ranking[0].gf, belgium.gf);
     }
 
     #[test]
     fn parse_belgian_playoff() {
         let content = include_str!("be2021-playoffs.html");
-        println!("{:#?}", parse_ranking(content));
-        assert!(false);
+        let ranking = parse_ranking(content);
+        let anderlecht = RankingEntry {
+            rank: 4,
+            team: String::from("Anderlecht"),
+            played: 6,
+            win: 0,
+            draw: 4,
+            lose: 2,
+            gf: 9,
+            ga: 11,
+            gd: -2,
+            points: 33,
+        };
+        assert_eq!(ranking[3].rank, anderlecht.rank);
+        assert_eq!(ranking[3].team, anderlecht.team);
+        assert_eq!(ranking[3].gf, anderlecht.gf);
     }
 }
