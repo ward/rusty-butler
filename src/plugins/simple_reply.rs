@@ -1,40 +1,26 @@
 use irc::client::prelude::*;
 use rand::seq::SliceRandom;
-use regex::Regex;
 
 pub struct SimpleReplyHandler {
     replies: Vec<SimpleReply>,
 }
 
 impl SimpleReplyHandler {
-    pub fn new() -> SimpleReplyHandler {
-        // TODO: Make this something that reads in from a .toml file or so
-        let replies = vec![
-            SimpleReply {
-                regex: Regex::new(r"^(?i)!esl$").unwrap(),
-                replies: vec![
-                    "DREAMS CAN'T BE BUY",
-                    "This Super League business is a betrayal to the memory of Prince Philip",
-                    "The traitors: Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Tottenham, AC Milan, Atletico Madrid, Barcelona, Inter Milan, Juventus, and Real Madrid",
-                    "where were you when football was kill",
-                    "positive message about ESL"
-                ],
-            },
-            SimpleReply {
-                regex: Regex::new(r"^(?i)!uptime$").unwrap(),
-                replies: vec!["Mitzy who?", "Mitzy where?"],
-            },
-            SimpleReply {
-                regex: Regex::new(r"^(?i)!stats$").unwrap(),
-                replies: vec!["Three months: https://irc.wxm.be/stats/reddit-soccer.html; All time: https://irc.wxm.be/stats/reddit-soccer.all.html"]
-            }
-        ];
+    pub fn new(config: &super::config::Config) -> SimpleReplyHandler {
+        let mut replies = vec![];
+        for (_name, reply_config) in &config.simple_reply.replies {
+            let reply = SimpleReply {
+                triggers: reply_config.triggers.clone(),
+                replies: reply_config.replies.clone(),
+            };
+            replies.push(reply);
+        }
         SimpleReplyHandler { replies }
     }
 
     fn matcher(&self, message: &str) -> Option<String> {
         for reply in &self.replies {
-            if reply.regex.is_match(message) {
+            if reply.triggered(message) {
                 return reply.get_reply();
             }
         }
@@ -66,25 +52,31 @@ impl super::help::Help for SimpleReplyHandler {
     }
 }
 
-impl Default for SimpleReplyHandler {
-    fn default() -> Self {
-        Self::new()
-    }
+struct SimpleReply {
+    triggers: Vec<String>,
+    replies: Vec<String>,
 }
 
-struct SimpleReply {
-    regex: Regex,
-    replies: Vec<&'static str>,
-}
 impl SimpleReply {
+    /// Check whether any of the triggers are matched by msg
+    fn triggered(&self, msg: &str) -> bool {
+        self.triggers
+            .iter()
+            .any(|trigger| trigger.eq_ignore_ascii_case(msg))
+    }
+
+    /// Returns a random reply
     fn get_reply(&self) -> Option<String> {
         if self.replies.len() == 1 {
             // Shortcut if there is no choice to be made
-            self.replies.get(1).map(|&s| s.to_owned())
-        } else if let Some(&choice) = self.replies.choose(&mut rand::thread_rng()) {
+            self.replies.get(1).map(|s| s.to_owned())
+        } else if let Some(choice) = self.replies.choose(&mut rand::thread_rng()) {
             Some(choice.to_owned())
         } else {
-            eprintln!("Failed to choose a reply after matching {:#?}", self.regex);
+            eprintln!(
+                "Failed to choose a reply after matching {:#?}",
+                self.triggers
+            );
             None
         }
     }

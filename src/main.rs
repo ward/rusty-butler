@@ -26,6 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_file_name = matches.value_of("config").unwrap();
     let config = Config::load(config_file_name).expect("Failed to load config");
     let config_for_handlers = Config::load(config_file_name).expect("Failed to load config");
+    let plugin_config = plugins::config::Config::new();
 
     let mut client = Client::from_config(config.clone()).await?;
     // Asks server if it can do SASL, once acknowledged (see later, we can ask to authenticate with
@@ -52,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&time_handler);
     let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
     help_handler.add_help(&untappd_handler);
-    let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new();
+    let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new(&plugin_config);
     help_handler.add_help(&simple_reply_handler);
     let mut handlers: Vec<Box<dyn Handler>> = vec![];
     handlers.push(Box::new(strava_handler));

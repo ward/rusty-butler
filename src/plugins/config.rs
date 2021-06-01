@@ -3,6 +3,7 @@ use std::collections::HashMap;
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub league_ranking: LeagueRankingConfig,
+    pub simple_reply: SimpleReplyConfig,
 }
 
 impl Config {
@@ -21,6 +22,16 @@ impl Default for Config {
 }
 
 // TODO How to keep the types for each plugin separate without creating circular dependencies?
+
+#[derive(Deserialize, Debug)]
+pub struct SimpleReplyConfig {
+    pub replies: HashMap<String, ReplyConfig>,
+}
+#[derive(Deserialize, Debug)]
+pub struct ReplyConfig {
+    pub triggers: Vec<String>,
+    pub replies: Vec<String>,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct LeagueRankingConfig {
