@@ -1,6 +1,7 @@
 use irc::client::prelude::*;
 use rand::seq::SliceRandom;
 
+#[derive(Debug)]
 pub struct SimpleReplyHandler {
     replies: Vec<SimpleReply>,
 }
@@ -52,6 +53,7 @@ impl super::help::Help for SimpleReplyHandler {
     }
 }
 
+#[derive(Debug)]
 struct SimpleReply {
     triggers: Vec<String>,
     replies: Vec<String>,
@@ -69,7 +71,7 @@ impl SimpleReply {
     fn get_reply(&self) -> Option<String> {
         if self.replies.len() == 1 {
             // Shortcut if there is no choice to be made
-            self.replies.get(1).map(|s| s.to_owned())
+            self.replies.get(0).map(|s| s.to_owned())
         } else if let Some(choice) = self.replies.choose(&mut rand::thread_rng()) {
             Some(choice.to_owned())
         } else {
@@ -79,5 +81,41 @@ impl SimpleReply {
             );
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_single_trigger() {
+        let reply = SimpleReply {
+            triggers: vec![String::from("hello")],
+            replies: vec![String::from("yo")],
+        };
+        assert!(reply.triggered("hello"));
+        assert!(!reply.triggered("hallo"));
+        assert!(!reply.triggered("hello there"));
+    }
+
+    #[test]
+    fn test_multiple_triggers() {
+        let reply = SimpleReply {
+            triggers: vec![String::from("hello"), String::from("hallo")],
+            replies: vec![String::from("yo")],
+        };
+        assert!(reply.triggered("hello"));
+        assert!(reply.triggered("hallo"));
+        assert!(!reply.triggered("hello there"));
+    }
+
+    #[test]
+    fn test_single_reply() {
+        let reply = SimpleReply {
+            triggers: vec![String::from("hello")],
+            replies: vec![String::from("yo")],
+        };
+        assert!(reply.get_reply().unwrap().eq_ignore_ascii_case("yo"));
     }
 }
