@@ -64,7 +64,7 @@ impl StravaHandler {
         let input: String = msg.graphemes(true).skip(7).collect();
         let input = input.trim();
         println!("Handling club");
-        let club_id = "freenode_running";
+        let club_id = "223460"; // Libera ##running (TODO: make this plugin config)
         let club = Club::fetch(club_id, access_token);
         let leaderboard = ClubLeaderboard::fetch(club_id, access_token);
         match club {
