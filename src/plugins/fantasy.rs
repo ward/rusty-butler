@@ -1,6 +1,8 @@
 use super::send_privmsg;
 use irc::client::prelude::*;
 
+const CACHE_DURATION: std::time::Duration = std::time::Duration::from_secs(3 * 60);
+
 pub struct FantasyHandler {
     /// To get the actual request to work, we first need a request to the regular page. In a
     /// browser this would then load the ranking info via the actual url.
@@ -9,6 +11,8 @@ pub struct FantasyHandler {
     url: String,
     cookie: String,
     auth_header: String,
+    ranking: Vec<UefaFantasyRanking>,
+    last_updated: std::time::Instant,
 }
 impl FantasyHandler {
     pub fn new(plugin_config: &super::config::Config) -> FantasyHandler {
@@ -26,7 +30,31 @@ impl FantasyHandler {
             url,
             cookie: plugin_config.fantasy.uefa.cookie.clone(),
             auth_header: plugin_config.fantasy.uefa.auth_header.clone(),
+            ranking: vec![],
+            last_updated: std::time::Instant::now()
+                .checked_sub(CACHE_DURATION)
+                .unwrap(),
         }
+    }
+
+    /// Updates if last update is older than CACHE_DURATION
+    pub fn update(&mut self) {
+        if self.needs_update() {
+            let new_ranking = self.fetch();
+            if new_ranking.is_empty() {
+                eprintln!("Received empty ranking");
+            } else {
+                self.last_updated = std::time::Instant::now();
+                self.ranking = new_ranking;
+            }
+        }
+    }
+
+    /// True if last update is older than CACHE_DURATION
+    fn needs_update(&self) -> bool {
+        let now = std::time::Instant::now();
+        let passed_time = now.duration_since(self.last_updated);
+        passed_time > CACHE_DURATION
     }
 
     fn fetch(&self) -> Vec<UefaFantasyRanking> {
@@ -82,18 +110,15 @@ impl super::MutableHandler for FantasyHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if FantasyHandler::matches(message) {
-                let ranking = self.fetch();
-                if ranking.is_empty() {
-                    send_privmsg(client, &channel, "Ranking empty, something went wrong");
-                } else {
-                    let ranking_txt = ranking
-                        .iter()
-                        .take(15)
-                        .map(|rank_entry| rank_entry.to_string())
-                        .collect::<Vec<String>>()
-                        .join("; ");
-                    send_privmsg(client, &channel, &ranking_txt);
-                }
+                self.update();
+                let ranking_txt = self
+                    .ranking
+                    .iter()
+                    .take(15)
+                    .map(|rank_entry| rank_entry.to_string())
+                    .collect::<Vec<String>>()
+                    .join("; ");
+                send_privmsg(client, &channel, &format!("[EURO FANTASY] {}", ranking_txt));
             }
         }
     }
