@@ -55,11 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&untappd_handler);
     let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new(&plugin_config);
     help_handler.add_help(&simple_reply_handler);
-    let mut handlers: Vec<Box<dyn Handler>> = vec![];
-    handlers.push(Box::new(strava_handler));
-    handlers.push(Box::new(time_handler));
-    handlers.push(Box::new(untappd_handler));
-    handlers.push(Box::new(simple_reply_handler));
+    let mut handlers: Vec<Box<dyn Handler>> = vec![
+        Box::new(strava_handler),
+        Box::new(time_handler),
+        Box::new(untappd_handler),
+        Box::new(simple_reply_handler),
+    ];
 
     // Mutable handlers
     let nickname_handler = plugins::nickname::NicknameHandler::new(&config_for_handlers);
@@ -74,13 +75,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&games_handler);
     let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
     help_handler.add_help(&ranking_handler);
-    let mut mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![];
-    mutable_handlers.push(Mutex::new(Box::new(nickname_handler)));
-    mutable_handlers.push(Mutex::new(Box::new(calc_handler)));
-    mutable_handlers.push(Mutex::new(Box::new(last_seen_handler)));
-    mutable_handlers.push(Mutex::new(Box::new(elo_handler)));
-    mutable_handlers.push(Mutex::new(Box::new(games_handler)));
-    mutable_handlers.push(Mutex::new(Box::new(ranking_handler)));
+    let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
+    help_handler.add_help(&fantasy_handler);
+    let mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![
+        Mutex::new(Box::new(nickname_handler)),
+        Mutex::new(Box::new(calc_handler)),
+        Mutex::new(Box::new(last_seen_handler)),
+        Mutex::new(Box::new(elo_handler)),
+        Mutex::new(Box::new(games_handler)),
+        Mutex::new(Box::new(ranking_handler)),
+        Mutex::new(Box::new(fantasy_handler)),
+    ];
 
     // Could not move help_handler before
     handlers.push(Box::new(help_handler));

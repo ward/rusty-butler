@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
+    pub fantasy: FantasyConfig,
     pub league_ranking: LeagueRankingConfig,
     pub simple_reply: SimpleReplyConfig,
 }
@@ -31,6 +32,19 @@ pub struct SimpleReplyConfig {
 pub struct ReplyConfig {
     pub triggers: Vec<String>,
     pub replies: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FantasyConfig {
+    pub uefa: FantasyUefaConfig,
+}
+#[derive(Deserialize, Debug)]
+pub struct FantasyUefaConfig {
+    pub league: u64,
+    pub name: String,
+    pub buster: String,
+    pub cookie: String,
+    pub auth_header: String,
 }
 
 #[derive(Deserialize, Debug)]
