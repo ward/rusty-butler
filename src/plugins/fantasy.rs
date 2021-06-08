@@ -33,7 +33,7 @@ impl FantasyHandler {
             ranking: vec![],
             last_updated: std::time::Instant::now()
                 .checked_sub(CACHE_DURATION)
-                .unwrap(),
+                .expect("[fantasy] Failed to initialise last_updated value"),
         }
     }
 
@@ -57,48 +57,64 @@ impl FantasyHandler {
         passed_time > CACHE_DURATION
     }
 
+    /// Fetches the EURO 2020 fantasy ranking from UEFA website. On any failure, an empty Vec is
+    /// returned. Ideally this will become a Result<> in the future.
     fn fetch(&self) -> Vec<UefaFantasyRanking> {
         use reqwest::header::*;
         let mut headers = HeaderMap::new();
         headers.insert(
             AUTHORIZATION,
-            HeaderValue::from_str(&self.auth_header).unwrap(),
+            HeaderValue::from_str(&self.auth_header)
+                .expect("Could not turn fantasy auth_header into a HeaderValue"),
         );
-        headers.insert(COOKIE, HeaderValue::from_str(&self.cookie).unwrap());
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_str(&self.cookie)
+                .expect("Could not turn fantasy cookie into a HeaderValue"),
+        );
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .default_headers(headers)
             .referer(true)
-            .build()
-            .unwrap();
-        if let Ok(resp) = client.get(&self.pre_url).send() {
-            let status = resp.status();
-            println!("Initial request gave status: {}", status);
-            println!("Fetching url: {}", self.url);
-            let req = client
+            .build();
+        match client {
+            Ok(client) => match client.get(&self.pre_url).send() {
+                Ok(resp) => {
+                    let status = resp.status();
+                    println!("Initial request gave status: {}", status);
+                    println!("Fetching url: {}", self.url);
+                    let req = client
                 .get(&self.url)
                 .header("TE", "Trailers")
                 .header("entity", "d3@t4N0te")
                 .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
-            match req.send() {
-                Ok(mut resp) => match resp.json() {
-                    Ok(UefaResponse::Response { data }) => data.value.rest,
-                    Ok(UefaResponse::Failure { status, title }) => {
-                        eprintln!("Received error from fantasy url. {} {}", status, title);
-                        vec![]
+                    match req.send() {
+                        Ok(mut resp) => match resp.json() {
+                            Ok(UefaResponse::Response { data }) => data.value.rest,
+                            Ok(UefaResponse::Failure { status, title }) => {
+                                eprintln!("Received error from fantasy url. {} {}", status, title);
+                                vec![]
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to parse fantasy url response. {}", e);
+                                vec![]
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Failed to get fantasy url. {}", e);
+                            vec![]
+                        }
                     }
-                    Err(e) => {
-                        eprintln!("Failed to parse fantasy url response. {}", e);
-                        vec![]
-                    }
-                },
+                }
                 Err(e) => {
-                    eprintln!("Failed to get fantasy url. {}", e);
+                    eprintln!("Failed to send(). {}", e);
                     vec![]
                 }
+            },
+            Err(e) => {
+                eprintln!("Could not create reqwest client. {}", e);
+                vec![]
             }
-        } else {
-            vec![]
         }
     }
 
