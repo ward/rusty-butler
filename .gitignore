@@ -3,3 +3,5 @@
 *.swp
 target-vps/
 bot.toml
+# Using this folder for SASL
+cert/
