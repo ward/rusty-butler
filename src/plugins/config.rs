@@ -41,6 +41,7 @@ pub struct FantasyConfig {
 #[derive(Deserialize, Debug)]
 pub struct FantasyUefaConfig {
     pub league: u64,
+    pub predictor_league: u64,
     pub name: String,
     pub buster: String,
     pub cookie: String,
