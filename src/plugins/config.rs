@@ -46,6 +46,7 @@ pub struct FantasyUefaConfig {
     pub buster: String,
     pub cookie: String,
     pub auth_header: String,
+    pub auth_header_predictor: String,
 }
 
 #[derive(Deserialize, Debug)]

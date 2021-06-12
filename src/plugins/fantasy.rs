@@ -13,6 +13,7 @@ pub struct FantasyHandler {
     predictor_url: String,
     cookie: String,
     auth_header: String,
+    auth_header_predictor: String,
     fantasy_ranking: Vec<UefaFantasyRanking>,
     predictor_ranking: Vec<UefaPredictorRanking>,
     last_fantasy_update: std::time::Instant,
@@ -45,6 +46,7 @@ league = plugin_config.fantasy.uefa.predictor_league
             predictor_pre_url,
             cookie: plugin_config.fantasy.uefa.cookie.clone(),
             auth_header: plugin_config.fantasy.uefa.auth_header.clone(),
+            auth_header_predictor: plugin_config.fantasy.uefa.auth_header_predictor.clone(),
             fantasy_ranking: vec![],
             predictor_ranking: vec![],
             last_fantasy_update: std::time::Instant::now()
@@ -160,7 +162,7 @@ league = plugin_config.fantasy.uefa.predictor_league
         let mut headers = HeaderMap::new();
         headers.insert(
             AUTHORIZATION,
-            HeaderValue::from_str(&self.auth_header)
+            HeaderValue::from_str(&self.auth_header_predictor)
                 .expect("Could not turn fantasy auth_header into a HeaderValue"),
         );
         headers.insert(
@@ -180,10 +182,9 @@ league = plugin_config.fantasy.uefa.predictor_league
                     println!("Initial request gave status: {}", status);
                     println!("Fetching url: {}", self.predictor_url);
                     let req = client
-                .get(&self.predictor_url)
-                .header("TE", "Trailers")
-                .header("entity", "d3@t4N0te")
-                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
+                        .get(&self.predictor_url)
+                        .header("TE", "Trailers")
+                        .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
                     match req.send() {
                         Ok(mut resp) => {
                             let status = resp.status();
