@@ -1,6 +1,5 @@
 use chrono::prelude::{DateTime, Utc};
 use irc::client::prelude::*;
-use reqwest;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct EloHandler {
@@ -8,12 +7,21 @@ pub struct EloHandler {
     cache_time: chrono::Duration,
     last_update: DateTime<Utc>,
 }
+
 impl EloHandler {
     pub fn new() -> EloHandler {
-        EloHandler {
-            elorankings: EloRanking::new().unwrap(),
-            cache_time: chrono::Duration::hours(12),
-            last_update: Utc::now(),
+        if let Some(elorankings) = EloRanking::new() {
+            EloHandler {
+                elorankings,
+                cache_time: chrono::Duration::hours(12),
+                last_update: Utc::now(),
+            }
+        } else {
+            EloHandler {
+                elorankings: EloRanking::empty(),
+                cache_time: chrono::Duration::hours(12),
+                last_update: Utc::now() - chrono::Duration::hours(13),
+            }
         }
     }
 
@@ -59,7 +67,7 @@ impl EloHandler {
                             return self
                                 .elorankings
                                 .nth_place(nth)
-                                .and_then(|entry| Some(entry.to_string()));
+                                .map(|entry| entry.to_string());
                         }
                     }
                 }
@@ -90,12 +98,17 @@ impl EloHandler {
     }
 }
 
+impl std::default::Default for EloHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl super::MutableHandler for EloHandler {
     fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
-            // Downside: This makes for updates if not requested at all.
-            // Upside: When the command *is* used, it will be pretty fast.
-            if self.is_cache_stale() {
+            // Only update when command is used
+            if message.starts_with("!elo") && self.is_cache_stale() {
                 self.update_rankings();
             }
 
@@ -118,20 +131,17 @@ impl super::help::Help for EloHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
-            "!elo",
-            "Show the top few teams ranked by clubelo.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!elo QUERY",
-            "Search for teams matching QUERY and list their clubelo.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!elo POSITION",
-            "Search for the team in POSITIONth place and list their clubelo.",
-        ));
-        result
+        vec![
+            super::help::HelpEntry::new("!elo", "Show the top few teams ranked by clubelo."),
+            super::help::HelpEntry::new(
+                "!elo QUERY",
+                "Search for teams matching QUERY and list their clubelo.",
+            ),
+            super::help::HelpEntry::new(
+                "!elo POSITION",
+                "Search for the team in POSITIONth place and list their clubelo.",
+            ),
+        ]
     }
 }
 
@@ -144,6 +154,10 @@ impl EloRanking {
     fn new() -> Option<EloRanking> {
         let csvtext = EloRanking::fetch()?;
         EloRanking::parse(&csvtext)
+    }
+
+    fn empty() -> EloRanking {
+        EloRanking { ranking: vec![] }
     }
 
     /// Fetch the current clubelo ranking from http://api.clubelo.com/
@@ -182,7 +196,7 @@ impl EloRanking {
     fn nth_place(&self, n: usize) -> Option<EloEntry> {
         // TODO: Can I make this a less heavy operation using references? Would need to tinker with
         // lifetimes though.
-        self.ranking.get(n - 1).and_then(|e| Some(e.clone()))
+        self.ranking.get(n - 1).cloned()
     }
 
     fn find_club(&self, name: &str) -> Vec<EloEntry> {
