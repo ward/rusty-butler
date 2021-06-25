@@ -74,22 +74,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&games_handler);
     let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
     help_handler.add_help(&ranking_handler);
-    let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
-    help_handler.add_help(&fantasy_handler);
     let mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![
         Mutex::new(Box::new(nickname_handler)),
         Mutex::new(Box::new(calc_handler)),
         Mutex::new(Box::new(last_seen_handler)),
         Mutex::new(Box::new(games_handler)),
         Mutex::new(Box::new(ranking_handler)),
-        Mutex::new(Box::new(fantasy_handler)),
     ];
 
     // Async mutable handlers
     let elo_handler = plugins::elo::EloHandler::new();
     help_handler.add_help(&elo_handler);
-    let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> =
-        vec![Mutex::new(Box::new(elo_handler))];
+    let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
+    help_handler.add_help(&fantasy_handler);
+    let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
+        Mutex::new(Box::new(elo_handler)),
+        Mutex::new(Box::new(fantasy_handler)),
+    ];
 
     // Could not move help_handler before
     handlers.push(Box::new(help_handler));
