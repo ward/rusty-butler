@@ -25,12 +25,12 @@ impl League {
     }
 
     /// Updates if last update is older than CACHE_DURATION
-    pub fn update(&mut self) {
+    pub async fn update(&mut self) {
         if self.needs_update() {
             println!("Fetching data from {}", self.url);
             self.last_updated = std::time::Instant::now();
-            if let Ok(mut resp) = reqwest::get(&self.url) {
-                if let Ok(content) = resp.text() {
+            if let Ok(resp) = reqwest::get(&self.url).await {
+                if let Ok(content) = resp.text().await {
                     self.ranking = parse_ranking(&content);
                 }
             }
@@ -140,12 +140,12 @@ impl Group {
     }
 
     /// Updates if last update is older than CACHE_DURATION
-    pub fn update(&mut self) {
+    pub async fn update(&mut self) {
         if self.needs_update() {
             println!("Fetching data from {}", self.url);
             self.last_updated = std::time::Instant::now();
-            if let Ok(mut resp) = reqwest::get(&self.url) {
-                if let Ok(content) = resp.text() {
+            if let Ok(resp) = reqwest::get(&self.url).await {
+                if let Ok(content) = resp.text().await {
                     self.ranking = parse_ranking(&content);
                 }
             }

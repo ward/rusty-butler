@@ -69,14 +69,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&last_seen_handler);
     let games_handler = plugins::games::GamesHandler::new();
     help_handler.add_help(&games_handler);
-    let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
-    help_handler.add_help(&ranking_handler);
     let mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![
         Mutex::new(Box::new(nickname_handler)),
         Mutex::new(Box::new(calc_handler)),
         Mutex::new(Box::new(last_seen_handler)),
         Mutex::new(Box::new(games_handler)),
-        Mutex::new(Box::new(ranking_handler)),
     ];
 
     // Async mutable handlers
@@ -84,11 +81,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&elo_handler);
     let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
     help_handler.add_help(&fantasy_handler);
+    let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
+    help_handler.add_help(&ranking_handler);
     let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
     help_handler.add_help(&strava_handler);
     let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
         Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(fantasy_handler)),
+        Mutex::new(Box::new(ranking_handler)),
         Mutex::new(Box::new(strava_handler)),
     ];
 

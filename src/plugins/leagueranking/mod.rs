@@ -1,10 +1,9 @@
 mod soccerway;
 
 use super::send_privmsg;
-
-use std::collections::HashMap;
-
+use async_trait::async_trait;
 use irc::client::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct LeagueRankingHandler {
@@ -61,8 +60,9 @@ impl LeagueRankingHandler {
     }
 }
 
-impl super::MutableHandler for LeagueRankingHandler {
-    fn handle(&mut self, client: &Client, msg: &Message) {
+#[async_trait]
+impl super::AsyncMutableHandler for LeagueRankingHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             let mut message_parts = message.split(' ');
             let rank_command = message_parts.next();
@@ -80,7 +80,7 @@ impl super::MutableHandler for LeagueRankingHandler {
             if let Some(league_name) = message_parts.next() {
                 let league_name = self.resolve_alias(league_name);
                 if let Some(league) = self.leagues.get_mut(&league_name) {
-                    league.update(); // This is why we need mut
+                    league.update().await; // This is why we need mut
 
                     let ranking = if let Some(who) = message_parts.next() {
                         if let Ok(who) = who.parse::<usize>() {
@@ -107,7 +107,7 @@ impl super::MutableHandler for LeagueRankingHandler {
                     if let Some(group) = message_parts.next() {
                         let group_name = group.to_lowercase();
                         if let Some(group) = competition.get_group_mut(&group_name) {
-                            group.update(); // This is why we need mut
+                            group.update().await; // This is why we need mut
 
                             let ranking_txt = group
                                 .get_ranking()
