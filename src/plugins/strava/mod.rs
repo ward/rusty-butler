@@ -1,4 +1,5 @@
 use super::formatting;
+use async_trait::async_trait;
 use irc::client::prelude::*;
 use regex::Regex;
 use std::error;
@@ -14,35 +15,35 @@ mod strava_irc_link;
 
 pub struct StravaHandler {
     access_token: Option<String>,
-    segment_matcher: Regex,
+    _segment_matcher: Regex,
     irc_links: strava_irc_link::StravaIrcLink,
 }
 
 impl StravaHandler {
     pub fn new(config: &Config) -> StravaHandler {
-        let segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
+        let _segment_matcher = Regex::new(r"https?://www\.strava\.com/segments/(\d+)").unwrap();
         let irc_links = strava_irc_link::StravaIrcLink::from_file_or_new("irc_links.json");
         match config.options.get("strava_access_token") {
             Some(access_token) => StravaHandler {
                 access_token: Some(access_token.clone()),
-                segment_matcher,
+                _segment_matcher,
                 irc_links,
             },
             None => {
                 println!("No Strava access token, disabling plugin.");
                 StravaHandler {
                     access_token: None,
-                    segment_matcher,
+                    _segment_matcher,
                     irc_links,
                 }
             }
         }
     }
 
-    fn handle_segments(&self, msg: &str, access_token: &str) -> Option<String> {
-        if let Some(captures) = self.segment_matcher.captures(msg) {
+    fn _handle_segments(&self, msg: &str, access_token: &str) -> Option<String> {
+        if let Some(captures) = self._segment_matcher.captures(msg) {
             println!("{}", captures.get(1).unwrap().as_str());
-            let segment = segment::Segment::fetch(captures.get(1).unwrap().as_str(), access_token);
+            let segment = segment::Segment::_fetch(captures.get(1).unwrap().as_str(), access_token);
             return match segment {
                 Ok(segment) => Some(segment.to_string()),
                 Err(e) => {
@@ -59,22 +60,26 @@ impl StravaHandler {
         first_seven.eq_ignore_ascii_case("!strava")
     }
 
-    fn handle_club(&self, msg: &str, access_token: &str) -> Vec<String> {
+    async fn handle_club(&self, msg: &str, access_token: &str) -> Vec<String> {
         let mut result = vec![];
         let input: String = msg.graphemes(true).skip(7).collect();
         let input = input.trim();
         println!("Handling club");
         let club_id = "223460"; // Libera ##running (TODO: make this plugin config)
-        let club = Club::fetch(club_id, access_token);
-        let leaderboard = ClubLeaderboard::fetch(club_id, access_token);
-        match club {
-            Ok(club) => result.push(format!(
-                "{club} https://www.strava.com/clubs/{club_id}",
-                club = club,
-                club_id = club_id
-            )),
-            Err(e) => eprintln!("Club::fetch failed: {}", e),
-        }
+
+        // Does not work, they changed their access_token api stuff. Need to refresh token
+        // and such. cba for something that was not used.
+        // let club = Club::fetch(club_id, access_token).await;
+        // match club {
+        //     Ok(club) => result.push(format!(
+        //         "{club} https://www.strava.com/clubs/{club_id}",
+        //         club = club,
+        //         club_id = club_id
+        //     )),
+        //     Err(e) => eprintln!("Club::fetch failed: {}", e),
+        // }
+
+        let leaderboard = ClubLeaderboard::fetch(club_id, access_token).await;
         match leaderboard {
             Ok(mut leaderboard) => {
                 match input.parse() {
@@ -91,20 +96,27 @@ impl StravaHandler {
             }
             Err(e) => eprintln!("Error fetching leaderboard: {}", e),
         }
+
         result
     }
 }
 
-impl super::Handler for StravaHandler {
-    fn handle(&self, client: &Client, msg: &Message) {
+// So this one is not actually currrently mutable. Probably _should_ make it cache the leaderboard
+// for at least one minute though.
+#[async_trait]
+impl super::AsyncMutableHandler for StravaHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Some(ref access_token) = self.access_token {
             if let Command::PRIVMSG(ref channel, ref message) = msg.command {
-                let segment_reply = self.handle_segments(message, &access_token);
-                if let Some(segment_id) = segment_reply {
-                    client.send_privmsg(&channel, &segment_id).unwrap()
-                }
+                // Does not work, they changed their access_token api stuff. Need to refresh token
+                // and such. cba for something that was not used.
+                // let segment_reply = self.handle_segments(message, &access_token);
+                // if let Some(segment_id) = segment_reply {
+                //     client.send_privmsg(&channel, &segment_id).unwrap()
+                // }
+
                 if StravaHandler::match_club(message) {
-                    let club_reply = self.handle_club(message, &access_token);
+                    let club_reply = self.handle_club(message, &access_token).await;
                     for reply in club_reply {
                         println!("SEND: {}", reply);
                         client.send_privmsg(&channel, &reply).unwrap()
@@ -137,14 +149,14 @@ struct Club {
     member_count: u32,
 }
 impl Club {
-    fn fetch(id: &str, access_token: &str) -> Result<Club, reqwest::Error> {
+    async fn _fetch(id: &str, access_token: &str) -> Result<Club, reqwest::Error> {
         let url = format!(
             "https://www.strava.com/api/v3/clubs/{}?access_token={}",
             id, access_token
         );
-        let mut req = reqwest::get(&url)?;
+        let req = reqwest::get(&url).await?;
         println!("{}", req.url());
-        req.json()
+        req.json().await
     }
 }
 impl fmt::Display for Club {
@@ -169,17 +181,18 @@ struct ClubLeaderboard {
 }
 
 impl ClubLeaderboard {
-    fn fetch(id: &str, _access_token: &str) -> Result<ClubLeaderboard, reqwest::Error> {
+    async fn fetch(id: &str, _access_token: &str) -> Result<ClubLeaderboard, reqwest::Error> {
         let url = format!("https://www.strava.com/clubs/{}/leaderboard", id);
         // More involved than the others because we need to change headers
         let client = reqwest::Client::new();
-        let mut req = client.get(&url)
+        let req = client.get(&url)
             .header("Accept", "text/javascript, application/javascript, application/ecmascript, application/x-ecmascript")
             .header("X-Requested-With", "XmlHttpRequest")
-            .send()?;
+            .send().await?;
         println!("{}", req.url());
-        req.json()
+        req.json().await
     }
+
     fn sort(&mut self, sort_by: ClubLeaderboardSort) {
         if sort_by == self.sorted_by {
             return;

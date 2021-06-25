@@ -48,8 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Non mutable handlers
     let mut help_handler = plugins::help::HelpHandler::new();
-    let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
-    help_handler.add_help(&strava_handler);
     let time_handler = plugins::time::TimeHandler::new();
     help_handler.add_help(&time_handler);
     let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
@@ -57,7 +55,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new(&plugin_config);
     help_handler.add_help(&simple_reply_handler);
     let mut handlers: Vec<Box<dyn Handler>> = vec![
-        Box::new(strava_handler),
         Box::new(time_handler),
         Box::new(untappd_handler),
         Box::new(simple_reply_handler),
@@ -87,9 +84,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&elo_handler);
     let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
     help_handler.add_help(&fantasy_handler);
+    let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
+    help_handler.add_help(&strava_handler);
     let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
         Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(fantasy_handler)),
+        Mutex::new(Box::new(strava_handler)),
     ];
 
     // Could not move help_handler before

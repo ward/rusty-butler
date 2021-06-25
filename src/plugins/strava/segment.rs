@@ -15,12 +15,12 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn fetch(id: &str, access_token: &str) -> Result<Segment, reqwest::Error> {
+    pub fn _fetch(id: &str, access_token: &str) -> Result<Segment, reqwest::Error> {
         let url = format!(
             "https://www.strava.com/api/v3/segments/{}?access_token={}",
             id, access_token
         );
-        let mut req = reqwest::get(&url)?;
+        let mut req = reqwest::blocking::get(&url)?;
         println!("{}", req.url());
         req.json()
     }
