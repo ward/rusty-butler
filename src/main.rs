@@ -70,8 +70,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&calc_handler);
     let last_seen_handler = plugins::lastseen::LastSeenHandler::new();
     help_handler.add_help(&last_seen_handler);
-    let elo_handler = plugins::elo::EloHandler::new();
-    help_handler.add_help(&elo_handler);
     let games_handler = plugins::games::GamesHandler::new();
     help_handler.add_help(&games_handler);
     let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
@@ -82,15 +80,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Mutex::new(Box::new(nickname_handler)),
         Mutex::new(Box::new(calc_handler)),
         Mutex::new(Box::new(last_seen_handler)),
-        Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(games_handler)),
         Mutex::new(Box::new(ranking_handler)),
         Mutex::new(Box::new(fantasy_handler)),
     ];
 
     // Async mutable handlers
+    let elo_handler = plugins::elo::EloHandler::new();
+    help_handler.add_help(&elo_handler);
     let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> =
-        vec![];
+        vec![Mutex::new(Box::new(elo_handler))];
 
     // Could not move help_handler before
     handlers.push(Box::new(help_handler));

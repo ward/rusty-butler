@@ -1,27 +1,20 @@
+use async_trait::async_trait;
 use chrono::prelude::{DateTime, Utc};
 use irc::client::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct EloHandler {
-    elorankings: EloRanking,
+    ranking: Vec<EloEntry>,
     cache_time: chrono::Duration,
     last_update: DateTime<Utc>,
 }
 
 impl EloHandler {
     pub fn new() -> EloHandler {
-        if let Some(elorankings) = EloRanking::new() {
-            EloHandler {
-                elorankings,
-                cache_time: chrono::Duration::hours(12),
-                last_update: Utc::now(),
-            }
-        } else {
-            EloHandler {
-                elorankings: EloRanking::empty(),
-                cache_time: chrono::Duration::hours(12),
-                last_update: Utc::now() - chrono::Duration::hours(13),
-            }
+        EloHandler {
+            ranking: vec![],
+            cache_time: chrono::Duration::hours(12),
+            last_update: Utc::now() - chrono::Duration::hours(13),
         }
     }
 
@@ -31,22 +24,26 @@ impl EloHandler {
     }
 
     /// Tries to update the rankings, leaves old one untouched if it fails.
-    fn update_rankings(&mut self) {
-        if let Some(newrankings) = EloRanking::new() {
-            self.elorankings = newrankings;
-            self.last_update = Utc::now();
+    async fn update_rankings(&mut self) {
+        if let Some(csvtext) = Self::fetch().await {
+            let ranking = Self::parse(&csvtext);
+            if ranking.len() > 0 {
+                self.ranking = ranking;
+                self.last_update = Utc::now();
+            }
         }
     }
 
     fn is_elo_trigger(msg: &str) -> bool {
         "!elo".eq_ignore_ascii_case(msg.trim())
     }
+
     fn handle_elo_ranking(&self, msg: &str) -> Option<String> {
         if EloHandler::is_elo_trigger(msg) {
             let ranks: Vec<String> = self
-                .elorankings
-                .top(15)
+                .ranking
                 .iter()
+                .take(15)
                 .map(|entry| entry.to_string())
                 .collect();
             Some(ranks.join("; "))
@@ -54,6 +51,7 @@ impl EloHandler {
             None
         }
     }
+
     fn handle_elo_nth(&self, msg: &str) -> Option<String> {
         let exclamation = msg.graphemes(true).next();
         if exclamation == Some("!") {
@@ -63,11 +61,11 @@ impl EloHandler {
                 if let Some(nth) = words.next() {
                     let cruft = words.next();
                     if cruft.is_none() && trigger.eq_ignore_ascii_case("elo") {
-                        if let Ok(nth) = nth.parse() {
+                        if let Ok(nth) = nth.parse::<usize>() {
                             return self
-                                .elorankings
-                                .nth_place(nth)
-                                .map(|entry| entry.to_string());
+                                .ranking
+                                .get(nth - 1)
+                                .map(|entry: &EloEntry| entry.to_string());
                         }
                     }
                 }
@@ -83,7 +81,7 @@ impl EloHandler {
                 if trigger.eq_ignore_ascii_case("elo") {
                     let query: Vec<&str> = words.collect();
                     let query = query.join(" ");
-                    let results = self.elorankings.find_club(&query);
+                    let results = self.find_club(&query);
                     if results.is_empty() {
                         return Some("No club found for your query".to_owned());
                     } else {
@@ -96,6 +94,42 @@ impl EloHandler {
         }
         None
     }
+
+    /// Fetch the current clubelo ranking from http://api.clubelo.com/
+    async fn fetch() -> Option<String> {
+        let now = Utc::now();
+        let url = now.format("http://api.clubelo.com/%Y-%m-%d").to_string();
+
+        let req = reqwest::get(&url).await.ok()?;
+        req.text().await.ok()
+    }
+
+    /// Parse a string in csv format representing current clubelo ranking. The csv format follows
+    /// the one api.clubelo.com uses.
+    fn parse(csvtext: &str) -> Vec<EloEntry> {
+        let mut ranking = vec![];
+        // Body is a csv file (with header)
+        for (ctr, line) in csvtext.lines().skip(1).enumerate() {
+            if let Some(entry) = EloEntry::parse(line, ctr) {
+                ranking.push(entry)
+            }
+        }
+        ranking
+    }
+
+    /// Search our ranking for teams matching the search term. Note that clubelo's team names
+    /// are... a bit weird.
+    fn find_club(&self, name: &str) -> Vec<EloEntry> {
+        // TODO: Have a list of name conversions since "Man City" is specific and does not match
+        // "Manchester".
+        // TODO: Lowercasing every club in the list cannot be efficient...
+        let name = name.to_lowercase();
+        self.ranking
+            .iter()
+            .filter(|entry| entry.club.to_lowercase().contains(&name))
+            .cloned()
+            .collect()
+    }
 }
 
 impl std::default::Default for EloHandler {
@@ -104,12 +138,13 @@ impl std::default::Default for EloHandler {
     }
 }
 
-impl super::MutableHandler for EloHandler {
-    fn handle(&mut self, client: &Client, msg: &Message) {
+#[async_trait]
+impl super::AsyncMutableHandler for EloHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             // Only update when command is used
             if message.starts_with("!elo") && self.is_cache_stale() {
-                self.update_rankings();
+                self.update_rankings().await;
             }
 
             let reply = self
@@ -142,73 +177,6 @@ impl super::help::Help for EloHandler {
                 "Search for the team in POSITIONth place and list their clubelo.",
             ),
         ]
-    }
-}
-
-#[derive(Debug)]
-struct EloRanking {
-    ranking: Vec<EloEntry>,
-}
-impl EloRanking {
-    /// Fetch the current clubelo ranking from http://api.clubelo.com/ and parse it
-    fn new() -> Option<EloRanking> {
-        let csvtext = EloRanking::fetch()?;
-        EloRanking::parse(&csvtext)
-    }
-
-    fn empty() -> EloRanking {
-        EloRanking { ranking: vec![] }
-    }
-
-    /// Fetch the current clubelo ranking from http://api.clubelo.com/
-    fn fetch() -> Option<String> {
-        let now = Utc::now();
-        let url = now.format("http://api.clubelo.com/%Y-%m-%d").to_string();
-
-        let mut req = reqwest::get(&url).ok()?;
-        req.text().ok()
-    }
-
-    /// Parse a string in csv format representing current clubelo ranking. The csv format follows
-    /// the one api.clubelo.com uses.
-    fn parse(csvtext: &str) -> Option<EloRanking> {
-        let mut s = EloRanking { ranking: vec![] };
-        // Body is a csv file (with header)
-        for (ctr, line) in csvtext.lines().skip(1).enumerate() {
-            if let Some(entry) = EloEntry::parse(line, ctr) {
-                s.ranking.push(entry)
-            }
-        }
-        Some(s)
-    }
-
-    fn top(&self, n: usize) -> Vec<EloEntry> {
-        // TODO: Can I make this a less heavy operation using references? Would need to tinker with
-        // lifetimes though.
-        let mut top = vec![];
-        for entry in self.ranking.iter().take(n) {
-            top.push(entry.clone());
-        }
-        top
-    }
-
-    /// Gets the team on place n (1 indexed to be what you would expect in a public facing ranking).
-    fn nth_place(&self, n: usize) -> Option<EloEntry> {
-        // TODO: Can I make this a less heavy operation using references? Would need to tinker with
-        // lifetimes though.
-        self.ranking.get(n - 1).cloned()
-    }
-
-    fn find_club(&self, name: &str) -> Vec<EloEntry> {
-        // TODO: Have a list of name conversions since "Man City" is specific and does not match
-        // "Manchester".
-        // TODO: Lowercasing every club in the list cannot be efficient...
-        let name = name.to_lowercase();
-        self.ranking
-            .iter()
-            .filter(|entry| entry.club.to_lowercase().contains(&name))
-            .cloned()
-            .collect()
     }
 }
 
@@ -277,20 +245,22 @@ mod tests {
 
     #[test]
     fn parse_ranking() {
-        let text = read_to_string("ranking.20190910.csv");
-        let elo = EloRanking::parse(&text).expect("Elo ranking did not parse");
-        let p612 = elo.nth_place(612).expect("There should be a 612th place");
+        let text = include_str!("clubelo.ranking.20190910.csv");
+        let elo = EloHandler::parse(&text);
+        assert!(elo.len() > 0);
+        let p612 = elo.get(612).expect("There should be a 612th place");
         assert_eq!(p612.club, "La Fiorita");
-        assert!(elo.nth_place(613).is_none());
-        let p187 = elo.nth_place(187).expect("There should be a 187th place");
+        assert!(elo.get(613).is_none());
+        let p187 = elo.get(187).expect("There should be a 187th place");
         assert_eq!(p187.club, "Anderlecht");
     }
 
     #[test]
     fn get_top_10() {
-        let text = read_to_string("ranking.20190910.csv");
-        let elo = EloRanking::parse(&text).expect("Elo ranking did not parse");
-        let top10 = elo.top(10);
+        let text = include_str!("clubelo.ranking.20190910.csv");
+        let elo = EloHandler::parse(&text);
+        assert!(elo.len() > 0);
+        let top10: Vec<&EloEntry> = elo.iter().take(10).collect();
         assert_eq!(top10.len(), 10);
         assert_eq!(top10[0].club, "Liverpool");
         assert_eq!(top10[9].club, "Ajax");
@@ -298,8 +268,11 @@ mod tests {
 
     #[test]
     fn find_exact_club() {
-        let text = read_to_string("ranking.20190910.csv");
-        let elo = EloRanking::parse(&text).expect("Elo ranking did not parse");
+        let text = include_str!("clubelo.ranking.20190910.csv");
+        let elorank = EloHandler::parse(&text);
+        assert!(elorank.len() > 0);
+        let mut elo = EloHandler::new();
+        elo.ranking = elorank;
         let results = elo.find_club("Anderlecht");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].club, "Anderlecht");
@@ -308,8 +281,11 @@ mod tests {
 
     #[test]
     fn find_different_case_club() {
-        let text = read_to_string("ranking.20190910.csv");
-        let elo = EloRanking::parse(&text).expect("Elo ranking did not parse");
+        let text = include_str!("clubelo.ranking.20190910.csv");
+        let elorank = EloHandler::parse(&text);
+        assert!(elorank.len() > 0);
+        let mut elo = EloHandler::new();
+        elo.ranking = elorank;
         let results = elo.find_club("anderlecht");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].club, "Anderlecht");
@@ -317,8 +293,11 @@ mod tests {
 
     #[test]
     fn find_many_clubs() {
-        let text = read_to_string("ranking.20190910.csv");
-        let elo = EloRanking::parse(&text).expect("Elo ranking did not parse");
+        let text = include_str!("clubelo.ranking.20190910.csv");
+        let elorank = EloHandler::parse(&text);
+        assert!(elorank.len() > 0);
+        let mut elo = EloHandler::new();
+        elo.ranking = elorank;
         let results = elo.find_club("man");
         assert_eq!(results.len(), 6);
         assert_eq!(results[0].club, "Man City");
