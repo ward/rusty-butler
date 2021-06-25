@@ -86,6 +86,20 @@ impl Parser {
                 competition: Some(String::from("Serie A")),
                 replace_by: vec![],
             },
+            // Remove after it is done?
+            Shortcut {
+                regex: Regex::new(r"^(?i)euros?(?: ?202[01])?$").unwrap(),
+                country: Some(String::from("Euro 2020")),
+                competition: None,
+                replace_by: vec![],
+            },
+            // Remove after it is done?
+            Shortcut {
+                regex: Regex::new(r"^(?i)copa$").unwrap(),
+                country: Some(String::from("Copa America")),
+                competition: None,
+                replace_by: vec![],
+            },
             Shortcut {
                 regex: Regex::new(r"^(?i)mls$").unwrap(),
                 country: Some(String::from("USA")),
@@ -131,7 +145,10 @@ impl Parser {
             } else if part.eq_ignore_ascii_case("@yesterday") || part.eq_ignore_ascii_case("@yday")
             {
                 time = QueryTime::Yesterday;
-            } else if part.eq_ignore_ascii_case("@finished") || part.eq_ignore_ascii_case("@past") {
+            } else if part.eq_ignore_ascii_case("@finished")
+                || part.eq_ignore_ascii_case("@past")
+                || part.eq_ignore_ascii_case("@done")
+            {
                 time = QueryTime::Finished;
             } else if part.eq_ignore_ascii_case("@upcoming") || part.eq_ignore_ascii_case("@soon") {
                 time = QueryTime::Upcoming;
