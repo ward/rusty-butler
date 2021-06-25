@@ -1,4 +1,5 @@
 use rusty_butler_lib::plugins;
+use rusty_butler_lib::plugins::AsyncMutableHandler;
 use rusty_butler_lib::plugins::Handler;
 use rusty_butler_lib::plugins::MutableHandler;
 
@@ -87,6 +88,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Mutex::new(Box::new(fantasy_handler)),
     ];
 
+    // Async mutable handlers
+    let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> =
+        vec![];
+
     // Could not move help_handler before
     handlers.push(Box::new(help_handler));
 
@@ -132,6 +137,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // TODO Is there a possibility of this slowing things down in unforseen ways?
             let mut mutable_handler = mutable_handler.lock().expect("Likely fatal! Getting a lock failed which implies another thread holding the lock panicked");
             mutable_handler.handle(&client, &irc_msg);
+        }
+        for async_mutable_handler in &async_mutable_handlers {
+            let mut async_mutable_handler = async_mutable_handler.lock().expect("Likely fatal! Getting a lock failed which implies another thread holding the lock panicked");
+            async_mutable_handler.handle(&client, &irc_msg).await;
         }
     }
 
