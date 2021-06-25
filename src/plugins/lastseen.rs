@@ -73,11 +73,9 @@ impl LastSeenHandler {
     }
 
     fn seen_trigger(&self, msg: &str) -> Option<String> {
-        if let Some(capture) = self.seen_matcher.captures(msg) {
-            Some(capture.get(1).unwrap().as_str().to_string())
-        } else {
-            None
-        }
+        self.seen_matcher
+            .captures(msg)
+            .map(|capture| capture.get(1).unwrap().as_str().to_string())
     }
 }
 impl super::MutableHandler for LastSeenHandler {
@@ -100,11 +98,16 @@ impl super::help::Help for LastSeenHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
+        let result = vec![super::help::HelpEntry::new(
             "!seen NICK",
             "Check what I saw NICK most recently do.",
-        ));
+        )];
         result
+    }
+}
+
+impl Default for LastSeenHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }

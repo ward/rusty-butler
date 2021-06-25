@@ -89,6 +89,8 @@ impl StravaIrcLink {
         None
     }
 
+    // Disabling this clippy warning on a function we do not currently use.
+    #[allow(clippy::map_entry)]
     pub fn _insert_connection(&mut self, strava_id: u64, nick: &str) {
         let owned_nick = nick.to_string();
         if self.users.contains_key(&strava_id) {

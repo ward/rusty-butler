@@ -151,21 +151,22 @@ impl Help for HelpHandler {
     }
 
     fn help(&self) -> Vec<HelpEntry> {
-        let mut result = vec![];
-        result.push(HelpEntry {
-            command: String::from("!help"),
-            description: String::from("Shows a list of plugins for which some help exists"),
-        });
-        result.push(HelpEntry {
-            command: String::from("!help PLUGINNAME"),
-            description: String::from("Shows a list of commands for the given plugin"),
-        });
-        result.push(HelpEntry {
-            command: String::from("!help PLUGINNAME INDEX"),
-            description: String::from(
-                "Shows the INDEXth command for the given plugin. Zero-based.",
-            ),
-        });
+        let result = vec![
+            HelpEntry {
+                command: String::from("!help"),
+                description: String::from("Shows a list of plugins for which some help exists"),
+            },
+            HelpEntry {
+                command: String::from("!help PLUGINNAME"),
+                description: String::from("Shows a list of commands for the given plugin"),
+            },
+            HelpEntry {
+                command: String::from("!help PLUGINNAME INDEX"),
+                description: String::from(
+                    "Shows the INDEXth command for the given plugin. Zero-based.",
+                ),
+            },
+        ];
         result
     }
 }

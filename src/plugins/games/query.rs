@@ -48,54 +48,55 @@ pub struct Parser {
 
 impl Parser {
     pub fn new() -> Self {
-        let mut shortcuts = vec![];
-        // (?i) is this crate's syntax to turn on case insensitivity
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)[eb]pl$").unwrap(),
-            country: Some(String::from("England")),
-            competition: Some(String::from("Premier League")),
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)(?:la?)?liga$").unwrap(),
-            country: Some(String::from("Spain")),
-            competition: Some(String::from("LaLiga Santander")),
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)u?cl$").unwrap(),
-            country: Some(String::from("Champions League")),
-            competition: None,
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)u?el$").unwrap(),
-            country: Some(String::from("Europa League")),
-            competition: None,
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)bundes(?:liga)?$").unwrap(),
-            country: Some(String::from("Germany")),
-            competition: Some(String::from("Bundesliga")),
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)serie[ -]a$").unwrap(),
-            country: Some(String::from("Italy")),
-            competition: Some(String::from("Serie A")),
-            replace_by: vec![],
-        });
-        shortcuts.push(Shortcut {
-            regex: Regex::new(r"^(?i)mls$").unwrap(),
-            country: Some(String::from("USA")),
-            competition: None,
-            replace_by: vec![
-                String::from("Major"),
-                String::from("League"),
-                String::from("Soccer"),
-            ],
-        });
+        let shortcuts = vec![
+            // (?i) is this crate's syntax to turn on case insensitivity
+            Shortcut {
+                regex: Regex::new(r"^(?i)[eb]pl$").unwrap(),
+                country: Some(String::from("England")),
+                competition: Some(String::from("Premier League")),
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)(?:la?)?liga$").unwrap(),
+                country: Some(String::from("Spain")),
+                competition: Some(String::from("LaLiga Santander")),
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)u?cl$").unwrap(),
+                country: Some(String::from("Champions League")),
+                competition: None,
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)u?el$").unwrap(),
+                country: Some(String::from("Europa League")),
+                competition: None,
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)bundes(?:liga)?$").unwrap(),
+                country: Some(String::from("Germany")),
+                competition: Some(String::from("Bundesliga")),
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)serie[ -]?a$").unwrap(),
+                country: Some(String::from("Italy")),
+                competition: Some(String::from("Serie A")),
+                replace_by: vec![],
+            },
+            Shortcut {
+                regex: Regex::new(r"^(?i)mls$").unwrap(),
+                country: Some(String::from("USA")),
+                competition: None,
+                replace_by: vec![
+                    String::from("Major"),
+                    String::from("League"),
+                    String::from("Soccer"),
+                ],
+            },
+        ];
         Self { shortcuts }
     }
 
@@ -137,14 +138,14 @@ impl Parser {
             } else if parsing_country {
                 let mut curr_country = country.expect("Should not be possible to be None");
                 if !curr_country.is_empty() {
-                    curr_country.push_str(" ");
+                    curr_country.push(' ');
                 }
                 curr_country.push_str(part);
                 country = Some(curr_country);
             } else if parsing_competition {
                 let mut curr_competition = competition.expect("Should not be possible to be None");
                 if !curr_competition.is_empty() {
-                    curr_competition.push_str(" ");
+                    curr_competition.push(' ');
                 }
                 curr_competition.push_str(part);
                 competition = Some(curr_competition);

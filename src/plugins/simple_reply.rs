@@ -9,7 +9,7 @@ pub struct SimpleReplyHandler {
 impl SimpleReplyHandler {
     pub fn new(config: &super::config::Config) -> SimpleReplyHandler {
         let mut replies = vec![];
-        for (_name, reply_config) in &config.simple_reply.replies {
+        for reply_config in config.simple_reply.replies.values() {
             let reply = SimpleReply {
                 triggers: reply_config.triggers.clone(),
                 replies: reply_config.replies.clone(),

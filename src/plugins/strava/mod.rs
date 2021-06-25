@@ -121,11 +121,11 @@ impl super::help::Help for StravaHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
+        let result = vec![
+            super::help::HelpEntry::new(
             "!strava (distance|slope|elevation|pace|time)",
             "Show the Strava freenode_running leaderboard for the given metric. Defaults to distance if none given.",
-        ));
+        )];
         result
     }
 }
@@ -205,7 +205,7 @@ impl ClubLeaderboard {
     fn override_names(&mut self, irc_links: &strava_irc_link::StravaIrcLink) {
         self.ranking.iter_mut().for_each(|athlete| {
             if let Some(nick) = irc_links.get_first_nick(athlete.strava_id) {
-                athlete.first_name = nick.to_owned()
+                athlete.first_name = nick
             }
         })
     }

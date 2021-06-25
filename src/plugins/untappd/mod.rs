@@ -79,15 +79,16 @@ impl super::help::Help for UntappdHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
-            "!untappd searchterm",
-            "Search for beer matching your search term.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!beer searchterm",
-            "Search for beer matching your search term.",
-        ));
+        let result = vec![
+            super::help::HelpEntry::new(
+                "!untappd searchterm",
+                "Search for beer matching your search term.",
+            ),
+            super::help::HelpEntry::new(
+                "!beer searchterm",
+                "Search for beer matching your search term.",
+            ),
+        ];
         // result.push(super::help::HelpEntry::new(
         //     "@NUMBER",
         //     "Modifier for your search, return the NUMBERth result.",

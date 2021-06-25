@@ -57,11 +57,11 @@ impl ToIrc for football::Football {
         let mut result = String::new();
         let mut gamecounter = 0;
         'countryloop: for country in &self.countries {
-            result.push_str("<");
+            result.push('<');
             result.push_str(&country.name);
             result.push_str("> ");
             for competition in &country.competitions {
-                result.push_str("[");
+                result.push('[');
                 result.push_str(&competition.name);
                 result.push_str("] ");
                 for game in &competition.games {
@@ -72,7 +72,7 @@ impl ToIrc for football::Football {
                         break 'countryloop;
                     }
                     result.push_str(&game.to_irc());
-                    result.push_str(" ");
+                    result.push(' ');
                 }
             }
         }

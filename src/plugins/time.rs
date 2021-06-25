@@ -41,12 +41,16 @@ impl super::help::Help for TimeHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
-            "!time / !utc / !now",
-            "Show the current time in UTC",
-        ));
-        result.push(super::help::HelpEntry::new("!gmt", "GMT is deprecated."));
+        let result = vec![
+            super::help::HelpEntry::new("!time / !utc / !now", "Show the current time in UTC"),
+            super::help::HelpEntry::new("!gmt", "GMT is deprecated."),
+        ];
         result
+    }
+}
+
+impl Default for TimeHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }

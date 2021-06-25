@@ -14,37 +14,38 @@ impl CalcHandler {
     pub fn new() -> CalcHandler {
         let mut ctx = rink::load().expect("Could not create calculator core?");
         ctx.short_output = true;
-        let mut shortcuts = vec![];
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"!km +(\d.*)$").unwrap(),
-            target_unit: "kilometre".to_owned(),
-            default_unit: "miles".to_owned(),
-        });
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"!mi(?:le)? +(\d.*)$").unwrap(),
-            target_unit: "miles".to_owned(),
-            default_unit: "kilometer".to_owned(),
-        });
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"^!c +(-?\d.*)$").unwrap(),
-            target_unit: "celsius".to_owned(),
-            default_unit: "fahrenheit".to_owned(),
-        });
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"^!f +(-?\d.*)$").unwrap(),
-            target_unit: "fahrenheit".to_owned(),
-            default_unit: "celsius".to_owned(),
-        });
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"^!kg +(-?\d.*)$").unwrap(),
-            target_unit: "kilogram".to_owned(),
-            default_unit: "lbs".to_owned(),
-        });
-        shortcuts.push(CalcShortcut {
-            regex: Regex::new(r"^!(?:lbs?|pound) +(-?\d.*)$").unwrap(),
-            target_unit: "lbs".to_owned(),
-            default_unit: "kilogram".to_owned(),
-        });
+        let shortcuts = vec![
+            CalcShortcut {
+                regex: Regex::new(r"!km +(\d.*)$").unwrap(),
+                target_unit: "kilometre".to_owned(),
+                default_unit: "miles".to_owned(),
+            },
+            CalcShortcut {
+                regex: Regex::new(r"!mi(?:le)? +(\d.*)$").unwrap(),
+                target_unit: "miles".to_owned(),
+                default_unit: "kilometer".to_owned(),
+            },
+            CalcShortcut {
+                regex: Regex::new(r"^!c +(-?\d.*)$").unwrap(),
+                target_unit: "celsius".to_owned(),
+                default_unit: "fahrenheit".to_owned(),
+            },
+            CalcShortcut {
+                regex: Regex::new(r"^!f +(-?\d.*)$").unwrap(),
+                target_unit: "fahrenheit".to_owned(),
+                default_unit: "celsius".to_owned(),
+            },
+            CalcShortcut {
+                regex: Regex::new(r"^!kg +(-?\d.*)$").unwrap(),
+                target_unit: "kilogram".to_owned(),
+                default_unit: "lbs".to_owned(),
+            },
+            CalcShortcut {
+                regex: Regex::new(r"^!(?:lbs?|pound) +(-?\d.*)$").unwrap(),
+                target_unit: "lbs".to_owned(),
+                default_unit: "kilogram".to_owned(),
+            },
+        ];
 
         let feet_to_cm_matcher = Regex::new(r"^!cm +(\d+)\D+([0-9.]+)").unwrap();
         let cm_to_feet_matcher =

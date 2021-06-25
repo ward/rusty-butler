@@ -48,11 +48,9 @@ impl GamesHandler {
     /// If incoming message looks like it should be a query, get the query from it. Otherwise None.
     fn get_query(&self, msg: &str) -> Option<String> {
         if let Some(captures) = self.query_matcher.captures(msg) {
-            if let Some(input) = captures.get(1) {
-                Some(input.as_str().trim().to_string())
-            } else {
-                None
-            }
+            captures
+                .get(1)
+                .map(|input| input.as_str().trim().to_string())
         } else {
             None
         }
@@ -175,39 +173,22 @@ impl super::help::Help for GamesHandler {
     }
 
     fn help(&self) -> Vec<super::help::HelpEntry> {
-        let mut result = vec![];
-        result.push(super::help::HelpEntry::new(
-            "!games",
-            "List countries for which there is information today.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games QUERY",
-            "Search for games matching query. Optionally combine with @modifiers or shortcuts",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @yday",
-            "Match yesterday's games.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @today",
-            "Match today's games.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @tomorrow",
-            "Match tomorrow's games.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @past",
-            "Match games which are finished.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @live",
-            "Match games currently ongoing.",
-        ));
-        result.push(super::help::HelpEntry::new(
-            "!games @soon",
-            "Match games yet to start.",
-        ));
+        let result = vec![
+            super::help::HelpEntry::new(
+                "!games",
+                "List countries for which there is information today.",
+            ),
+            super::help::HelpEntry::new(
+                "!games QUERY",
+                "Search for games matching query. Optionally combine with @modifiers or shortcuts",
+            ),
+            super::help::HelpEntry::new("!games @yday", "Match yesterday's games."),
+            super::help::HelpEntry::new("!games @today", "Match today's games."),
+            super::help::HelpEntry::new("!games @tomorrow", "Match tomorrow's games."),
+            super::help::HelpEntry::new("!games @done", "Match games which are finished."),
+            super::help::HelpEntry::new("!games @live", "Match games currently ongoing."),
+            super::help::HelpEntry::new("!games @soon", "Match games yet to start."),
+        ];
         result
     }
 }

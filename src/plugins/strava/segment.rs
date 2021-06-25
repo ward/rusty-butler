@@ -29,10 +29,7 @@ impl Segment {
 impl fmt::Display for Segment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let distance = (self.distance / 100.0).floor() / 10.0;
-        let state = match self.state {
-            Some(ref s) => s,
-            None => "-",
-        };
+        let state = self.state.as_deref().unwrap_or("-");
         write!(f,
                "[STRAVA SEGMENT] \"{name}\", {activity_type} of {distance}km @ {grade}%. {effort_count} attempts by {athlete_count} athletes. Located in {city}, {state}, {country}.",
                 name = self.name,

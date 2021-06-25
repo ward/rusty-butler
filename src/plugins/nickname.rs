@@ -10,14 +10,8 @@ pub struct NicknameHandler {
 
 impl NicknameHandler {
     pub fn new(config: &Config) -> NicknameHandler {
-        let nick = match &config.nickname {
-            Some(nickname) => Some(nickname.clone()),
-            None => None,
-        };
-        let nickserv_password = match &config.nick_password {
-            Some(pass) => Some(pass.clone()),
-            None => None,
-        };
+        let nick = config.nickname.as_ref().cloned();
+        let nickserv_password = config.nick_password.as_ref().cloned();
         NicknameHandler {
             nick,
             nickserv_password,
