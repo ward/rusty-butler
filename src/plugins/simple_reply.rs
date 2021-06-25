@@ -19,7 +19,9 @@ impl SimpleReplyHandler {
         SimpleReplyHandler { replies }
     }
 
+    /// Trims spaces, then tries to match against a trigger from the reply database
     fn matcher(&self, message: &str) -> Option<String> {
+        let message = message.trim();
         for reply in &self.replies {
             if reply.triggered(message) {
                 return reply.get_reply();
