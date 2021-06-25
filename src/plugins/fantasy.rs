@@ -1,4 +1,5 @@
 use super::send_privmsg;
+use async_trait::async_trait;
 use irc::client::prelude::*;
 
 const CACHE_DURATION: std::time::Duration = std::time::Duration::from_secs(3 * 60);
@@ -59,9 +60,9 @@ league = plugin_config.fantasy.uefa.predictor_league
     }
 
     /// Updates if last update is older than CACHE_DURATION
-    pub fn fantasy_update(&mut self) {
+    pub async fn fantasy_update(&mut self) {
         if self.needs_fantasy_update() {
-            let new_ranking = self.fetch();
+            let new_ranking = self.fetch().await;
             if new_ranking.is_empty() {
                 eprintln!("Received empty ranking");
             } else {
@@ -70,9 +71,10 @@ league = plugin_config.fantasy.uefa.predictor_league
             }
         }
     }
-    pub fn predictor_update(&mut self) {
+
+    pub async fn predictor_update(&mut self) {
         if self.needs_predictor_update() {
-            let new_ranking = self.fetch_predictor();
+            let new_ranking = self.fetch_predictor().await;
             if new_ranking.is_empty() {
                 eprintln!("Received empty predictor ranking");
             } else {
@@ -98,7 +100,7 @@ league = plugin_config.fantasy.uefa.predictor_league
 
     /// Fetches the EURO 2020 fantasy ranking from UEFA website. On any failure, an empty Vec is
     /// returned. Ideally this will become a Result<> in the future.
-    fn fetch(&self) -> Vec<UefaFantasyRanking> {
+    async fn fetch(&self) -> Vec<UefaFantasyRanking> {
         use reqwest::header::*;
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -117,7 +119,7 @@ league = plugin_config.fantasy.uefa.predictor_league
             .referer(true)
             .build();
         match client {
-            Ok(client) => match client.get(&self.fantasy_pre_url).send() {
+            Ok(client) => match client.get(&self.fantasy_pre_url).send().await {
                 Ok(resp) => {
                     let status = resp.status();
                     println!("Initial request gave status: {}", status);
@@ -127,8 +129,8 @@ league = plugin_config.fantasy.uefa.predictor_league
                 .header("TE", "Trailers")
                 .header("entity", "d3@t4N0te")
                 .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
-                    match req.send() {
-                        Ok(mut resp) => match resp.json() {
+                    match req.send().await {
+                        Ok(resp) => match resp.json().await {
                             Ok(UefaResponse::Response { data }) => data.value.rest,
                             Ok(UefaResponse::Failure { status, title }) => {
                                 eprintln!("Received error from fantasy url. {} {}", status, title);
@@ -157,7 +159,7 @@ league = plugin_config.fantasy.uefa.predictor_league
         }
     }
 
-    fn fetch_predictor(&self) -> Vec<UefaPredictorRanking> {
+    async fn fetch_predictor(&self) -> Vec<UefaPredictorRanking> {
         use reqwest::header::*;
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -176,23 +178,23 @@ league = plugin_config.fantasy.uefa.predictor_league
             .referer(true)
             .build();
         match client {
-            Ok(client) => match client.get(&self.predictor_pre_url).send() {
+            Ok(client) => match client.get(&self.predictor_pre_url).send().await {
                 Ok(resp) => {
                     let status = resp.status();
                     println!("Initial request gave status: {}", status);
                     println!("Fetching url: {}", self.predictor_url);
                     let req = client
                         .get(&self.predictor_url)
-                        .header("TE", "Trailers")
+                        // .header("TE", "Trailers")
                         .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
-                    match req.send() {
-                        Ok(mut resp) => {
+                    match req.send().await {
+                        Ok(resp) => {
                             let status = resp.status();
                             if status.is_client_error() || status.is_server_error() {
                                 eprintln!("Failed to fetch predictor url: {}", status);
                                 return vec![];
                             }
-                            match resp.json::<UefaPredictorResponse>() {
+                            match resp.json::<UefaPredictorResponse>().await {
                                 Ok(uefa_predictor_response) => uefa_predictor_response.data.items,
                                 Err(e) => {
                                     eprintln!("Failed to parse predictor url response. {}", e);
@@ -233,11 +235,13 @@ league = plugin_config.fantasy.uefa.predictor_league
             || text.eq_ignore_ascii_case("!uefapredictor")
     }
 }
-impl super::MutableHandler for FantasyHandler {
-    fn handle(&mut self, client: &Client, msg: &Message) {
+
+#[async_trait]
+impl super::AsyncMutableHandler for FantasyHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             if FantasyHandler::fantasy_matches(message) {
-                self.fantasy_update();
+                self.fantasy_update().await;
                 let ranking_txt = self
                     .fantasy_ranking
                     .iter()
@@ -247,7 +251,7 @@ impl super::MutableHandler for FantasyHandler {
                     .join("; ");
                 send_privmsg(client, &channel, &format!("[EURO FANTASY] {}", ranking_txt));
             } else if FantasyHandler::predictor_matches(message) {
-                self.predictor_update();
+                self.predictor_update().await;
                 let ranking_txt = self
                     .predictor_ranking
                     .iter()

@@ -2,6 +2,7 @@
 extern crate serde_derive;
 
 pub mod plugins {
+    use async_trait::async_trait;
     use irc::client::prelude::*;
     use unicode_segmentation::UnicodeSegmentation;
 
@@ -10,6 +11,10 @@ pub mod plugins {
     }
     pub trait MutableHandler: help::Help {
         fn handle(&mut self, client: &Client, msg: &Message);
+    }
+    #[async_trait]
+    pub trait AsyncMutableHandler: help::Help {
+        async fn handle(&mut self, client: &Client, msg: &Message);
     }
 
     pub fn print_msg(msg: &Message) {

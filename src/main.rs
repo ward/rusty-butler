@@ -1,4 +1,5 @@
 use rusty_butler_lib::plugins;
+use rusty_butler_lib::plugins::AsyncMutableHandler;
 use rusty_butler_lib::plugins::Handler;
 use rusty_butler_lib::plugins::MutableHandler;
 
@@ -47,20 +48,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Non mutable handlers
     let mut help_handler = plugins::help::HelpHandler::new();
-    let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
-    help_handler.add_help(&strava_handler);
     let time_handler = plugins::time::TimeHandler::new();
     help_handler.add_help(&time_handler);
-    let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
-    help_handler.add_help(&untappd_handler);
     let simple_reply_handler = plugins::simple_reply::SimpleReplyHandler::new(&plugin_config);
     help_handler.add_help(&simple_reply_handler);
-    let mut handlers: Vec<Box<dyn Handler>> = vec![
-        Box::new(strava_handler),
-        Box::new(time_handler),
-        Box::new(untappd_handler),
-        Box::new(simple_reply_handler),
-    ];
+    let mut handlers: Vec<Box<dyn Handler>> =
+        vec![Box::new(time_handler), Box::new(simple_reply_handler)];
 
     // Mutable handlers
     let nickname_handler = plugins::nickname::NicknameHandler::new(&config_for_handlers);
@@ -69,22 +62,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&calc_handler);
     let last_seen_handler = plugins::lastseen::LastSeenHandler::new();
     help_handler.add_help(&last_seen_handler);
-    let elo_handler = plugins::elo::EloHandler::new();
-    help_handler.add_help(&elo_handler);
     let games_handler = plugins::games::GamesHandler::new();
     help_handler.add_help(&games_handler);
-    let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
-    help_handler.add_help(&ranking_handler);
-    let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
-    help_handler.add_help(&fantasy_handler);
     let mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![
         Mutex::new(Box::new(nickname_handler)),
         Mutex::new(Box::new(calc_handler)),
         Mutex::new(Box::new(last_seen_handler)),
-        Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(games_handler)),
-        Mutex::new(Box::new(ranking_handler)),
+    ];
+
+    // Async mutable handlers
+    let elo_handler = plugins::elo::EloHandler::new();
+    help_handler.add_help(&elo_handler);
+    let fantasy_handler = plugins::fantasy::FantasyHandler::new(&plugin_config);
+    help_handler.add_help(&fantasy_handler);
+    let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
+    help_handler.add_help(&ranking_handler);
+    let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
+    help_handler.add_help(&strava_handler);
+    let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
+    help_handler.add_help(&untappd_handler);
+    let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
+        Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(fantasy_handler)),
+        Mutex::new(Box::new(ranking_handler)),
+        Mutex::new(Box::new(strava_handler)),
+        Mutex::new(Box::new(untappd_handler)),
     ];
 
     // Could not move help_handler before
@@ -132,6 +135,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // TODO Is there a possibility of this slowing things down in unforseen ways?
             let mut mutable_handler = mutable_handler.lock().expect("Likely fatal! Getting a lock failed which implies another thread holding the lock panicked");
             mutable_handler.handle(&client, &irc_msg);
+        }
+        for async_mutable_handler in &async_mutable_handlers {
+            let mut async_mutable_handler = async_mutable_handler.lock().expect("Likely fatal! Getting a lock failed which implies another thread holding the lock panicked");
+            async_mutable_handler.handle(&client, &irc_msg).await;
         }
     }
 

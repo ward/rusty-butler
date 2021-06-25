@@ -4,7 +4,7 @@
 
 const USER_AGENT: &str = "rusty-butler-untappd-plugin";
 
-pub fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<BeerResult> {
+pub async fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<BeerResult> {
     let url = format!(
         "https://api.untappd.com/v4/search/beer?client_id={client_id}&client_secret={client_secret}&q={query}",
         client_id=client_id,
@@ -16,8 +16,8 @@ pub fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<BeerResu
         .get(&url)
         .header(reqwest::header::USER_AGENT, USER_AGENT);
     // TODO Keep track of failure information to pass it to the user
-    match req.send() {
-        Ok(mut resp) => match resp.json::<UntappdApiReply>() {
+    match req.send().await {
+        Ok(resp) => match resp.json::<UntappdApiReply>().await {
             Ok(untappd_search) => match untappd_search.response {
                 Some(response) => response.beers.items,
                 None => {

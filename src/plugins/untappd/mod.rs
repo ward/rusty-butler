@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use irc::client::prelude::*;
 use regex::Regex;
 
@@ -38,8 +39,11 @@ impl UntappdHandler {
 // TODO
 // - optional @number for search
 
-impl super::Handler for UntappdHandler {
-    fn handle(&self, client: &Client, msg: &Message) {
+// This one is most definitely not in need of mutability at the time of writing, but I only have
+// the one async one.
+#[async_trait]
+impl super::AsyncMutableHandler for UntappdHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if self.client_id.is_none() || self.client_secret.is_none() {
             return;
         }
@@ -51,7 +55,8 @@ impl super::Handler for UntappdHandler {
                         query,
                         self.client_id.as_ref().unwrap(),
                         self.client_secret.as_ref().unwrap(),
-                    );
+                    )
+                    .await;
                     if beers.is_empty() {
                         super::send_privmsg(client, channel, "Your query returned no results");
                     } else if beers.len() == 1 {
