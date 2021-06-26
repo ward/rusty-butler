@@ -5,14 +5,14 @@ use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub struct CalcHandler {
-    ctx: rink::Context,
+    ctx: rink_core::Context,
     shortcuts: Vec<CalcShortcut>,
     feet_to_cm_matcher: Regex,
     cm_to_feet_matcher: Regex,
 }
 impl CalcHandler {
     pub fn new() -> CalcHandler {
-        let mut ctx = rink::load().expect("Could not create calculator core?");
+        let mut ctx = rink_core::simple_context().expect("Could not create calculator core?");
         ctx.short_output = true;
         let shortcuts = vec![
             CalcShortcut {
@@ -69,7 +69,7 @@ impl CalcHandler {
     }
 
     fn eval(&mut self, line: &str) -> Result<String, String> {
-        rink::one_line(&mut self.ctx, line)
+        rink_core::one_line(&mut self.ctx, line)
     }
 
     /// Checks incoming message to see whether it uses a calculation shortcut. If so, return
@@ -169,6 +169,7 @@ impl super::MutableHandler for CalcHandler {
                     }
                 }
             }
+
             // TODO Integrate with the above...
             if let Some(ref to_eval) = self.handle_shortcut(message) {
                 match self.eval(to_eval) {
