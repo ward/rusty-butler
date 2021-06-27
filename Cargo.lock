@@ -547,7 +547,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "football"
 version = "0.2.0"
-source = "git+https://github.com/ward/football#19ac642a66f1307ed7c1911b2a1d1e3d3fc2d102"
+source = "git+https://github.com/ward/football#a6e3e2f8e265a62c9ef6899850b75ec3dd08960e"
 dependencies = [
  "bitap",
  "chrono",
