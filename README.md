@@ -10,7 +10,6 @@ Things I was required to install with `apt` on a fresh Lubuntu installation:
 - `build-essential`
 - `pkg-config` for openssl-sys crate
 - `libssl-dev` for openssl-sys crate
-- `libgmp-dev` (possibly) for the rink crate
 
 # Maintenance
 
