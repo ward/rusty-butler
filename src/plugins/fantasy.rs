@@ -221,6 +221,7 @@ league = plugin_config.fantasy.uefa.predictor_league
     }
 
     fn fantasy_matches(text: &str) -> bool {
+        let text = text.trim();
         text.eq_ignore_ascii_case("!fantasy")
             || text.eq_ignore_ascii_case("!ufpl")
             || text.eq_ignore_ascii_case("!uefafantasy")
@@ -229,6 +230,7 @@ league = plugin_config.fantasy.uefa.predictor_league
     }
 
     fn predictor_matches(text: &str) -> bool {
+        let text = text.trim();
         text.eq_ignore_ascii_case("!predict")
             || text.eq_ignore_ascii_case("!predictor")
             || text.eq_ignore_ascii_case("!uefapredict")
