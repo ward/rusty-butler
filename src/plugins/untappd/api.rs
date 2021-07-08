@@ -5,15 +5,15 @@
 const USER_AGENT: &str = "rusty-butler-untappd-plugin";
 
 pub async fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<BeerResult> {
-    let url = format!(
-        "https://api.untappd.com/v4/search/beer?client_id={client_id}&client_secret={client_secret}&q={query}",
-        client_id=client_id,
-        client_secret=client_secret,
-        query=sanitise_query(query)
-    );
+    let url = "https://api.untappd.com/v4/search/beer";
     let client = reqwest::Client::new();
     let req = client
-        .get(&url)
+        .get(url)
+        .query(&[
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("q", query), // Encodes it for us
+        ])
         .header(reqwest::header::USER_AGENT, USER_AGENT);
     // TODO Keep track of failure information to pass it to the user
     match req.send().await {
@@ -35,11 +35,6 @@ pub async fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<Be
             vec![]
         }
     }
-}
-
-fn sanitise_query(query: &str) -> String {
-    // TODO Actual url encoding?
-    query.replace(|ch: char| !ch.is_alphanumeric(), " ")
 }
 
 /// Every API call results in the same root structure
