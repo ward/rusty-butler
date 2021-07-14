@@ -86,20 +86,6 @@ impl Parser {
                 competition: Some(String::from("Serie A")),
                 replace_by: vec![],
             },
-            // Remove after it is done?
-            Shortcut {
-                regex: Regex::new(r"^(?i)euros?(?: ?202[01])?$").unwrap(),
-                country: Some(String::from("Euro 2020")),
-                competition: None,
-                replace_by: vec![],
-            },
-            // Remove after it is done?
-            Shortcut {
-                regex: Regex::new(r"^(?i)copa$").unwrap(),
-                country: Some(String::from("Copa America")),
-                competition: None,
-                replace_by: vec![],
-            },
             Shortcut {
                 regex: Regex::new(r"^(?i)mls$").unwrap(),
                 country: Some(String::from("USA")),

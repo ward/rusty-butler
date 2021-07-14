@@ -27,7 +27,7 @@ impl EloHandler {
     async fn update_rankings(&mut self) {
         if let Some(csvtext) = Self::fetch().await {
             let ranking = Self::parse(&csvtext);
-            if ranking.len() > 0 {
+            if !ranking.is_empty() {
                 self.ranking = ranking;
                 self.last_update = Utc::now();
             }
@@ -95,7 +95,7 @@ impl EloHandler {
         None
     }
 
-    /// Fetch the current clubelo ranking from http://api.clubelo.com/
+    /// Fetch the current clubelo ranking from <http://api.clubelo.com/>
     async fn fetch() -> Option<String> {
         let now = Utc::now();
         let url = now.format("http://api.clubelo.com/%Y-%m-%d").to_string();
