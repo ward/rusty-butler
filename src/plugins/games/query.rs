@@ -21,6 +21,7 @@ impl Query {
 // finished might not expect to get everything from yesterday too, currently it would.
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryTime {
+    SlidingWindow,
     Today,
     Tomorrow,
     Yesterday,
@@ -112,7 +113,7 @@ impl Parser {
         let mut competition: Option<String> = None;
         let mut parsing_country = false;
         let mut parsing_competition = false;
-        let mut time = QueryTime::Today;
+        let mut time = QueryTime::SlidingWindow;
         for part in msg_parts {
             if part.eq_ignore_ascii_case("--country") {
                 parsing_country = true;

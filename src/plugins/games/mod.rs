@@ -111,6 +111,7 @@ impl super::MutableHandler for GamesHandler {
                     filtered
                 };
                 let filtered = match query.time {
+                    query::QueryTime::SlidingWindow => filtered.sliding_window(10, 16),
                     query::QueryTime::Today => filtered.today(),
                     query::QueryTime::Yesterday => filtered.yesterday(),
                     query::QueryTime::Tomorrow => filtered.tomorrow(),
@@ -141,7 +142,7 @@ impl super::MutableHandler for GamesHandler {
                 println!("Handling empty !games");
                 self.update();
                 let mut result = String::new();
-                let todays_games = self.games.today();
+                let todays_games = self.games.sliding_window(10, 16);
                 if todays_games.countries.is_empty() {
                     result.push_str("I've got nothing today. Go outside and enjoy the weather.");
                 } else {
