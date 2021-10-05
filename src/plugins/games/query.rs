@@ -76,6 +76,12 @@ impl Parser {
                 replace_by: vec![],
             },
             Shortcut {
+                regex: Regex::new(r"^(?i)ecl$").unwrap(),
+                country: Some(String::from("Europa Conference League")),
+                competition: None,
+                replace_by: vec![],
+            },
+            Shortcut {
                 regex: Regex::new(r"^(?i)bundes(?:liga)?$").unwrap(),
                 country: Some(String::from("Germany")),
                 competition: Some(String::from("Bundesliga")),

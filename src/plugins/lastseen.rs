@@ -32,7 +32,7 @@ impl fmt::Display for LastSeenEvent {
 }
 impl LastSeenHandler {
     pub fn new() -> LastSeenHandler {
-        let seen_matcher = Regex::new(r"^!(?:last)?seen +(.+) *$").unwrap();
+        let seen_matcher = Regex::new(r"^!(?:last)?seen +([^ ]+) *$").unwrap();
         LastSeenHandler {
             events: HashMap::new(),
             seen_matcher,
@@ -85,6 +85,10 @@ impl super::MutableHandler for LastSeenHandler {
             if let Some(nick) = self.seen_trigger(message) {
                 if let Some(event) = self.find_event(&nick) {
                     client.send_privmsg(&channel, &event.to_string()).unwrap();
+                } else {
+                    client
+                        .send_privmsg(&channel, format!("I got nothing for '{}'.", nick))
+                        .unwrap();
                 }
             }
         }
@@ -109,5 +113,32 @@ impl super::help::Help for LastSeenHandler {
 impl Default for LastSeenHandler {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn match_nick() {
+        let last_seen_handler = LastSeenHandler::new();
+        assert_eq!(
+            "ward",
+            last_seen_handler.seen_trigger("!seen ward").unwrap()
+        );
+        assert_eq!(
+            "ward",
+            last_seen_handler.seen_trigger("!seen ward ").unwrap()
+        );
+        assert_eq!(
+            "ward",
+            last_seen_handler.seen_trigger("!lastseen ward").unwrap()
+        );
+        assert_eq!(
+            "ward",
+            last_seen_handler.seen_trigger("!lastseen ward ").unwrap()
+        );
+        assert_eq!(None, last_seen_handler.seen_trigger("!lastseen "));
     }
 }

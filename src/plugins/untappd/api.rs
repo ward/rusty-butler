@@ -198,11 +198,4 @@ mod tests {
         println!("{:#?}", response);
         assert_eq!(parsed_reponse, response);
     }
-
-    #[test]
-    fn sanitising_queries() {
-        let q = "hello&stuff=ha";
-        let s = "hello stuff ha";
-        assert_eq!(s, sanitise_query(q));
-    }
 }
