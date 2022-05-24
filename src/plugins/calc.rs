@@ -228,7 +228,7 @@ impl super::help::Help for CalcHandler {
             ),
             super::help::HelpEntry::new(
                 "!calc NUMBER UNIT to UNIT",
-                "Converts number. No spaces in UNIT. 'to UNIT' optional.",
+                "Converts number. No spaces in UNIT. 'to UNIT' optional. See https://github.com/tiffany352/rink-rs/blob/master/core/definitions.units for all units.",
             ),
         ];
         result
