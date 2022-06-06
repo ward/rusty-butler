@@ -802,7 +802,7 @@ dependencies = [
  "http 0.2.5",
  "indexmap",
  "slab",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tokio-util",
  "tracing",
 ]
@@ -941,7 +941,7 @@ dependencies = [
  "itoa",
  "pin-project-lite",
  "socket2",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tower-service",
  "tracing",
  "want 0.3.0",
@@ -969,7 +969,7 @@ dependencies = [
  "bytes 1.1.0",
  "hyper 0.14.13",
  "native-tls",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tokio-native-tls",
 ]
 
@@ -1046,7 +1046,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "thiserror",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tokio-native-tls",
  "tokio-stream",
  "tokio-util",
@@ -1062,7 +1062,7 @@ dependencies = [
  "bytes 1.1.0",
  "encoding",
  "thiserror",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tokio-util",
 ]
 
@@ -1975,7 +1975,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded 0.7.0",
  "time 0.2.27",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "tokio-native-tls",
  "url 2.2.2",
  "wasm-bindgen",
@@ -2041,7 +2041,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "tokio 1.12.0",
+ "tokio 1.13.1",
  "toml",
  "unicode-segmentation",
 ]
@@ -2546,9 +2546,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.12.0"
+version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2c2416fdedca8443ae44b4527de1ea633af61d8f7169ffa6e72c5b53d24efcc"
+checksum = "52963f91310c08d91cb7bff5786dfc8b79642ab839e188187e92105dbfb9d2c8"
 dependencies = [
  "autocfg 1.0.1",
  "bytes 1.1.0",
@@ -2621,7 +2621,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7d995660bd2b7f8c1568414c1126076c13fbb725c40112dc0120b78eb9b717b"
 dependencies = [
  "native-tls",
- "tokio 1.12.0",
+ "tokio 1.13.1",
 ]
 
 [[package]]
@@ -2651,7 +2651,7 @@ checksum = "7b2f3f698253f03119ac0102beaa64f67a67e08074d03a22d18784104543727f"
 dependencies = [
  "futures-core",
  "pin-project-lite",
- "tokio 1.12.0",
+ "tokio 1.13.1",
 ]
 
 [[package]]
@@ -2718,7 +2718,7 @@ dependencies = [
  "futures-sink",
  "log",
  "pin-project-lite",
- "tokio 1.12.0",
+ "tokio 1.13.1",
 ]
 
 [[package]]
