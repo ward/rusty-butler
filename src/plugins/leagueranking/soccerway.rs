@@ -25,15 +25,28 @@ impl League {
     }
 
     /// Updates if last update is older than CACHE_DURATION
-    pub async fn update(&mut self) {
+    pub async fn update(&mut self) -> Result<(), reqwest::Error> {
         if self.needs_update() {
             println!("Fetching data from {}", self.url);
             self.last_updated = std::time::Instant::now();
-            if let Ok(resp) = reqwest::get(&self.url).await {
-                if let Ok(content) = resp.text().await {
-                    self.ranking = parse_ranking(&content);
-                }
+            let client = create_client()?;
+            let resp = client
+                .get(&self.url)
+                .version(reqwest::Version::HTTP_11)
+                .send()
+                .await?;
+            if resp.status().is_success() {
+                let content = resp.text().await?;
+                self.ranking = parse_ranking(&content);
+            } else {
+                // TODO return error. Need to make my own error type then that also wraps the
+                // reqwest ones.
+                eprintln!("Request was not successful, status: {}", resp.status());
             }
+
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 
@@ -140,15 +153,28 @@ impl Group {
     }
 
     /// Updates if last update is older than CACHE_DURATION
-    pub async fn update(&mut self) {
+    pub async fn update(&mut self) -> Result<(), reqwest::Error> {
         if self.needs_update() {
             println!("Fetching data from {}", self.url);
             self.last_updated = std::time::Instant::now();
-            if let Ok(resp) = reqwest::get(&self.url).await {
-                if let Ok(content) = resp.text().await {
-                    self.ranking = parse_ranking(&content);
-                }
+            let client = create_client()?;
+            let resp = client
+                .get(&self.url)
+                .version(reqwest::Version::HTTP_11)
+                .send()
+                .await?;
+            if resp.status().is_success() {
+                let content = resp.text().await?;
+                self.ranking = parse_ranking(&content);
+            } else {
+                // TODO return error. Need to make my own error type then that also wraps the
+                // reqwest ones.
+                eprintln!("Request was not successful, status: {}", resp.status());
             }
+
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 
@@ -162,6 +188,43 @@ impl Group {
     pub fn get_ranking(&self) -> &Vec<RankingEntry> {
         &self.ranking
     }
+}
+
+/// Both League and Group need the same kind of client
+fn create_client() -> Result<reqwest::Client, reqwest::Error> {
+    // Took a bit of trial and error to get it working, but seems to be good now.
+    let client_builder = reqwest::ClientBuilder::new();
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::COOKIE,
+        reqwest::header::HeaderValue::from_static("cookies_enabled=;"),
+    );
+    headers.insert(
+        reqwest::header::ACCEPT_LANGUAGE,
+        reqwest::header::HeaderValue::from_static("en-GB,en-US;q=0.7,en;q=0.3"),
+    );
+    headers.insert(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        ),
+    );
+    headers.insert(
+        reqwest::header::UPGRADE_INSECURE_REQUESTS,
+        reqwest::header::HeaderValue::from_static("1"),
+    );
+    headers.insert(
+        reqwest::header::CONNECTION,
+        reqwest::header::HeaderValue::from_static("keep-alive"),
+    );
+    let client = client_builder
+        .connection_verbose(true)
+        .user_agent(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0",
+        )
+        .cookie_store(true)
+        .default_headers(headers);
+    client.build()
 }
 
 #[derive(Debug)]

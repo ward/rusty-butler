@@ -1,4 +1,7 @@
-mod soccerway;
+// Made this public so I can directly tinker around with it in an example binary. Definitely not
+// the way to go, but it helped in a pinch. Probably need to just make this its own library/crate
+// eventually.
+pub mod soccerway;
 
 use super::send_privmsg;
 use async_trait::async_trait;
@@ -80,7 +83,10 @@ impl super::AsyncMutableHandler for LeagueRankingHandler {
             if let Some(league_name) = message_parts.next() {
                 let league_name = self.resolve_alias(league_name);
                 if let Some(league) = self.leagues.get_mut(&league_name) {
-                    league.update().await; // This is why we need mut
+                    // This is why we need mut
+                    if let Err(e) = league.update().await {
+                        eprintln!("Failed to update group ranking: {}", e);
+                    }
 
                     let ranking = if let Some(who) = message_parts.next() {
                         if let Ok(who) = who.parse::<usize>() {
@@ -107,7 +113,10 @@ impl super::AsyncMutableHandler for LeagueRankingHandler {
                     if let Some(group) = message_parts.next() {
                         let group_name = group.to_lowercase();
                         if let Some(group) = competition.get_group_mut(&group_name) {
-                            group.update().await; // This is why we need mut
+                            // This is why we need mut
+                            if let Err(e) = group.update().await {
+                                eprintln!("Failed to update group ranking: {}", e);
+                            }
 
                             let ranking_txt = group
                                 .get_ranking()
