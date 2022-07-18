@@ -9,8 +9,14 @@ use std::sync::Mutex;
 
 use clap::{App, Arg};
 
+#[macro_use]
+extern crate log;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // RUST_LOG env variable controls what shows. eg RUST_LOG=info cargo run
+    env_logger::init();
+
     let matches = App::new("rusty-butler")
         .version("0.4.0")
         .author("Ward Muylaert")
