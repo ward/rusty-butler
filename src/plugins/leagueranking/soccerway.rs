@@ -231,13 +231,13 @@ fn create_client() -> Result<reqwest::Client, reqwest::Error> {
 pub struct RankingEntry {
     rank: u8,
     team: String,
-    played: u8,
+    _played: u8,
     win: u8,
     draw: u8,
     lose: u8,
     gf: u8,
     ga: u8,
-    gd: i8,
+    _gd: i8,
     points: u8,
 }
 
@@ -250,25 +250,25 @@ impl RankingEntry {
         // Need to clean this up, too much repetition
         let rank = cells.next()?.text().next()?.parse().ok()?;
         let team = cells.nth(1)?.text().next()?.to_owned();
-        let played = cells.next()?.text().next()?.parse().ok()?;
+        let _played = cells.next()?.text().next()?.parse().ok()?;
         let win = cells.next()?.text().next()?.parse().ok()?;
         let draw = cells.next()?.text().next()?.parse().ok()?;
         let lose = cells.next()?.text().next()?.parse().ok()?;
         let gf = cells.next()?.text().next()?.parse().ok()?;
         let ga = cells.next()?.text().next()?.parse().ok()?;
-        let gd = cells.next()?.text().next()?.parse().ok()?;
+        let _gd = cells.next()?.text().next()?.parse().ok()?;
         let points = cells.next()?.text().next()?.parse().ok()?;
 
         Some(RankingEntry {
             rank,
             team,
-            played,
+            _played,
             win,
             draw,
             lose,
             gf,
             ga,
-            gd,
+            _gd,
             points,
         })
     }

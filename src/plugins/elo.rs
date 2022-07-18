@@ -184,11 +184,11 @@ impl super::help::Help for EloHandler {
 struct EloEntry {
     rank: usize,
     club: String,
-    country: String,
-    level: String,
+    _country: String,
+    _level: String,
     elo: f32,
-    from: String,
-    to: String,
+    _from: String,
+    _to: String,
 }
 impl EloEntry {
     fn parse(csvline: &str, rank: usize) -> Option<EloEntry> {
@@ -209,11 +209,11 @@ impl EloEntry {
         Some(EloEntry {
             rank,
             club,
-            country,
-            level,
+            _country: country,
+            _level: level,
             elo,
-            from,
-            to,
+            _from: from,
+            _to: to,
         })
     }
 }

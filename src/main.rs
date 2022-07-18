@@ -109,13 +109,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match irc_msg.command {
             Command::CAP(_, ref subcommand, _, _) => {
                 if subcommand.to_str() == "ACK" {
-                    println!("Recieved ack for sasl");
+                    info!("Recieved ack for sasl");
                     // client.send_sasl_plain()?;
                     client.send_sasl_external()?;
                 }
             }
             Command::AUTHENTICATE(_) => {
-                println!("Got signal to continue authenticating");
+                info!("Got signal to continue authenticating");
                 client.send(Command::AUTHENTICATE(String::from('+')))?;
                 // client.send(Command::AUTHENTICATE(base64::encode(format!(
                 //     "{}\x00{}\x00{}",
@@ -127,7 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Command::Response(code, _) => {
                 if code == Response::RPL_SASLSUCCESS {
-                    println!("Successfully authenticated");
+                    info!("Successfully authenticated");
                     client.send(Command::CAP(None, "END".parse()?, None, None))?;
                 }
             }

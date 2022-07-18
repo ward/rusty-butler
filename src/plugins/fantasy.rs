@@ -294,7 +294,7 @@ struct UefaFantasyRanking {
     #[serde(rename = "teamName")]
     team_name: String,
     #[serde(rename = "fullName")]
-    full_name: String,
+    _full_name: String,
     #[serde(rename = "overallPoints")]
     overall_points: String,
     #[serde(rename = "rankNo")]

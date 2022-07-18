@@ -28,3 +28,9 @@ Follow some best practices to keep the code clean:
 
 - Basic query parsing should probably be centralised, always the same idea.
 - `plugins.toml` should let you decide which plugins to enable.
+- Need to filter out a bunch of lesser competitions that nobody cares about.
+    - Have an include and exclude list
+    - Option to exclude all and only allow explicit includes?
+    - Have the list be a configuration, not hardcoded
+    - Have an --all or similar option when you _do_ want to look through
+      everything
