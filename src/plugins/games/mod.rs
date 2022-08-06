@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use chrono::prelude::*;
 use chrono::Duration;
 use football::*;
@@ -20,8 +21,8 @@ pub struct GamesHandler {
 }
 
 impl GamesHandler {
-    pub fn new() -> Self {
-        let games = match get_all_games() {
+    pub async fn new() -> Self {
+        let games = match get_all_games().await {
             Ok(games) => games,
             Err(e) => {
                 eprintln!(
@@ -65,11 +66,11 @@ impl GamesHandler {
     ///
     /// TODO: Should/can this be async? Kick off an update while still using current stored
     /// results. Or perhaps if updating takes longer than x seconds, use old data.
-    fn update(&mut self) {
+    async fn update(&mut self) {
         let now = Utc::now();
         if now - self.cached_at > self.cache_threshold {
             println!("Starting football games update...");
-            match get_all_games() {
+            match get_all_games().await {
                 Ok(new_games) => {
                     println!("Got football games update.");
                     self.games = new_games;
@@ -81,8 +82,9 @@ impl GamesHandler {
     }
 }
 
-impl super::MutableHandler for GamesHandler {
-    fn handle(&mut self, client: &Client, msg: &Message) {
+#[async_trait]
+impl super::AsyncMutableHandler for GamesHandler {
+    async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
             let query = if message.eq_ignore_ascii_case("!epl") {
                 // !epl shortshortcut (in future replace this with an alias plugin)
@@ -96,7 +98,7 @@ impl super::MutableHandler for GamesHandler {
             };
             if let Some(query) = query {
                 println!("Handling !games query: '{}'", query);
-                self.update();
+                self.update().await;
                 let query = self.query_parser.from_message(&query);
                 println!("Query parsed as: {:?}", query);
                 let filtered = self.games.query(&query.just_query_string());
@@ -140,7 +142,7 @@ impl super::MutableHandler for GamesHandler {
                 send_privmsg(client, &channel, &result);
             } else if self.is_empty_query(message) {
                 println!("Handling empty !games");
-                self.update();
+                self.update().await;
                 let mut result = String::new();
                 let todays_games = self.games.sliding_window(10, 16);
                 if todays_games.countries.is_empty() {
@@ -159,12 +161,6 @@ impl super::MutableHandler for GamesHandler {
                 client.send_privmsg(&channel, &result).unwrap();
             }
         }
-    }
-}
-
-impl Default for GamesHandler {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

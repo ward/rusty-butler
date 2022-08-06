@@ -1,17 +1,14 @@
-// Made this public so I can directly tinker around with it in an example binary. Definitely not
-// the way to go, but it helped in a pinch. Probably need to just make this its own library/crate
-// eventually.
-pub mod soccerway;
-
 use super::send_privmsg;
 use async_trait::async_trait;
 use irc::client::prelude::*;
 use std::collections::HashMap;
 
+use football::ranking::beebs::CachedLeagues;
+
 #[derive(Debug)]
 pub struct LeagueRankingHandler {
-    competitions: HashMap<String, soccerway::Competition>,
-    leagues: HashMap<String, soccerway::League>,
+    competitions: HashMap<String, CachedLeagues>,
+    leagues: HashMap<String, CachedLeagues>,
     aliases: HashMap<String, String>,
 }
 
@@ -26,19 +23,13 @@ impl LeagueRankingHandler {
         let mut aliases = HashMap::new();
 
         for (name, league_config) in config.league_ranking.leagues.iter() {
-            leagues.insert(
-                name.clone(),
-                soccerway::League::new(league_config.url.clone()),
-            );
+            leagues.insert(name.clone(), CachedLeagues::empty(&league_config.url));
             for alias in &league_config.alias {
                 aliases.insert(alias.clone(), name.clone());
             }
         }
         for (name, competition_config) in config.league_ranking.competitions.iter() {
-            competitions.insert(
-                name.clone(),
-                soccerway::Competition::new(&competition_config.groups),
-            );
+            competitions.insert(name.clone(), CachedLeagues::empty(&competition_config.url));
             for alias in &competition_config.alias {
                 aliases.insert(alias.clone(), name.clone());
             }
@@ -88,36 +79,42 @@ impl super::AsyncMutableHandler for LeagueRankingHandler {
                         eprintln!("Failed to update group ranking: {}", e);
                     }
 
-                    let ranking = if let Some(who) = message_parts.next() {
-                        if let Ok(who) = who.parse::<usize>() {
-                            league.get_ranking_around(if who > 1 { who - 1 } else { who })
+                    // In a regular league, there is only one
+                    if let Some(league) = league.get(0) {
+                        let ranking = if let Some(who) = message_parts.next() {
+                            if let Ok(who) = who.parse::<usize>() {
+                                league.get_ranking_around(if who > 1 { who - 1 } else { who })
+                            } else {
+                                let pos = league.find_team_position(who);
+                                league.get_ranking_around(pos.into())
+                            }
                         } else {
-                            let pos = league.find_team_position(who);
-                            league.get_ranking_around(pos.into())
-                        }
-                    } else {
-                        league.get_ranking_around(1)
-                    };
+                            league.get_ranking_around(1)
+                        };
 
-                    let ranking_txt = ranking
-                        .iter()
-                        .map(|rank_entry| rank_entry.to_string())
-                        .collect::<Vec<String>>()
-                        .join("; ");
-                    send_privmsg(
-                        client,
-                        &channel,
-                        &format!("[{}] {}", league_name, ranking_txt),
-                    );
+                        let ranking_txt = ranking
+                            .iter()
+                            .map(|rank_entry| rank_entry.to_string())
+                            .collect::<Vec<String>>()
+                            .join("; ");
+                        send_privmsg(
+                            client,
+                            &channel,
+                            &format!("[{}] {}", league_name, ranking_txt),
+                        );
+                    }
                 } else if let Some(competition) = self.competitions.get_mut(&league_name) {
                     if let Some(group) = message_parts.next() {
                         let group_name = group.to_lowercase();
-                        if let Some(group) = competition.get_group_mut(&group_name) {
-                            // This is why we need mut
-                            if let Err(e) = group.update().await {
-                                eprintln!("Failed to update group ranking: {}", e);
-                            }
+                        let group_number = group_name_to_number(&group_name);
+                        println!("{} - {}", group_name, group_number);
 
+                        // This is why we need mut
+                        if let Err(e) = competition.update().await {
+                            eprintln!("Failed to update group ranking: {}", e);
+                        }
+
+                        if let Some(group) = competition.get(group_number) {
                             let ranking_txt = group
                                 .get_ranking()
                                 .iter()
@@ -143,6 +140,53 @@ impl super::AsyncMutableHandler for LeagueRankingHandler {
     }
 }
 
+/// Bit of an assumption here that I know will fail (e.g. the A1 etc groups in nations league).
+/// Good enough for now...
+fn group_name_to_number(letter: &str) -> usize {
+    match letter {
+        "a" => 0,
+        "b" => 1,
+        "c" => 2,
+        "d" => 3,
+        "e" => 4,
+        "f" => 5,
+        "g" => 6,
+        "h" => 7,
+        "i" => 8,
+        "j" => 9,
+        "k" => 10,
+        "l" => 11,
+        "m" => 12,
+        "n" => 13,
+        "o" => 14,
+        "p" => 15,
+        "q" => 16,
+        "r" => 17,
+        "s" => 18,
+        "t" => 19,
+        "u" => 20,
+        "v" => 21,
+        "w" => 22,
+        "x" => 23,
+        "y" => 24,
+        "a1" => 0,
+        "a2" => 1,
+        "a3" => 2,
+        "a4" => 3,
+        "b1" => 4,
+        "b2" => 5,
+        "b3" => 6,
+        "b4" => 7,
+        "c1" => 8,
+        "c2" => 9,
+        "c3" => 10,
+        "c4" => 11,
+        "d1" => 12,
+        "d2" => 13,
+        _ => 0,
+    }
+}
+
 impl super::help::Help for LeagueRankingHandler {
     fn name(&self) -> String {
         String::from("league_ranking")
@@ -165,5 +209,16 @@ impl super::help::Help for LeagueRankingHandler {
 impl Default for LeagueRankingHandler {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+mod tests {
+    #[test]
+    fn test_group_name_converter() {
+        let letters = vec!["a", "b", "f", "b2", "c4"];
+        let group_numbers = vec![0, 1, 5, 5, 11];
+        for (letter, number) in letters.into_iter().zip(group_numbers.into_iter()) {
+            assert_eq!(super::group_name_to_number(letter), number);
+        }
     }
 }

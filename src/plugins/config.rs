@@ -52,7 +52,7 @@ pub struct FantasyUefaConfig {
 #[derive(Deserialize, Debug)]
 pub struct LeagueRankingConfig {
     pub leagues: HashMap<String, LeagueConfig>,
-    pub competitions: HashMap<String, CompetitionConfig>,
+    pub competitions: HashMap<String, LeagueConfig>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -61,8 +61,8 @@ pub struct LeagueConfig {
     pub url: String,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct CompetitionConfig {
-    pub alias: Vec<String>,
-    pub groups: HashMap<String, String>,
-}
+// #[derive(Deserialize, Debug)]
+// pub struct CompetitionConfig {
+//     pub alias: Vec<String>,
+//     pub groups: HashMap<String, String>,
+// }

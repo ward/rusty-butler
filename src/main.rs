@@ -68,13 +68,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&calc_handler);
     let last_seen_handler = plugins::lastseen::LastSeenHandler::new();
     help_handler.add_help(&last_seen_handler);
-    let games_handler = plugins::games::GamesHandler::new();
-    help_handler.add_help(&games_handler);
     let mutable_handlers: Vec<Mutex<Box<dyn MutableHandler>>> = vec![
         Mutex::new(Box::new(nickname_handler)),
         Mutex::new(Box::new(calc_handler)),
         Mutex::new(Box::new(last_seen_handler)),
-        Mutex::new(Box::new(games_handler)),
     ];
 
     // Async mutable handlers
@@ -88,12 +85,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&strava_handler);
     let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
     help_handler.add_help(&untappd_handler);
+    let games_handler = plugins::games::GamesHandler::new().await;
+    help_handler.add_help(&games_handler);
     let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
         Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(fantasy_handler)),
         Mutex::new(Box::new(ranking_handler)),
         Mutex::new(Box::new(strava_handler)),
         Mutex::new(Box::new(untappd_handler)),
+        Mutex::new(Box::new(games_handler)),
     ];
 
     // Could not move help_handler before
