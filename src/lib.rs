@@ -75,8 +75,6 @@ pub mod plugins {
 
     pub mod leagueranking;
 
-    pub mod fantasy;
-
     pub mod help;
 
     pub mod config;
