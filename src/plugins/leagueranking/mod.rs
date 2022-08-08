@@ -183,6 +183,14 @@ fn group_name_to_number(letter: &str) -> usize {
         "c4" => 11,
         "d1" => 12,
         "d2" => 13,
+        "1" => 0,
+        "2" => 1,
+        "3" => 2,
+        "4" => 3,
+        "5" => 4,
+        // Since I misuse MLS...
+        "east" => 0,
+        "west" => 1,
         _ => 0,
     }
 }
