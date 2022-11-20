@@ -89,6 +89,8 @@ impl super::AsyncMutableHandler for GamesHandler {
             let query = if message.eq_ignore_ascii_case("!epl") {
                 // !epl shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game --country England --competition Premier League")
+            } else if message.eq_ignore_ascii_case("!wc") {
+                self.get_query("!game --country World Cup 2022")
             } else if message.eq_ignore_ascii_case("!genk") {
                 // !genk shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game genk")

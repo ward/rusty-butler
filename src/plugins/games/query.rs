@@ -103,6 +103,12 @@ impl Parser {
                     String::from("Soccer"),
                 ],
             },
+            Shortcut {
+                regex: Regex::new(r"^(?i)w(?:orld)?c(?:up)?$").unwrap(),
+                country: Some(String::from("World Cup 2022")),
+                competition: None,
+                replace_by: vec![],
+            },
         ];
         Self { shortcuts }
     }
@@ -335,6 +341,19 @@ mod tests {
         let query = parser.from_message("@yday epl");
         assert_eq!(desired, query);
         let query = parser.from_message("epl @yday");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_world_cup_shortcut() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("World Cup 2022")),
+            competition: None,
+            time: QueryTime::SlidingWindow,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("wc");
         assert_eq!(desired, query);
     }
 }
