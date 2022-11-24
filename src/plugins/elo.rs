@@ -248,10 +248,10 @@ mod tests {
         let text = include_str!("clubelo.ranking.20190910.csv");
         let elo = EloHandler::parse(&text);
         assert!(elo.len() > 0);
-        let p612 = elo.get(612).expect("There should be a 612th place");
+        let p612 = elo.get(611).expect("There should be a 612th place");
         assert_eq!(p612.club, "La Fiorita");
         assert!(elo.get(613).is_none());
-        let p187 = elo.get(187).expect("There should be a 187th place");
+        let p187 = elo.get(186).expect("There should be a 187th place");
         assert_eq!(p187.club, "Anderlecht");
     }
 

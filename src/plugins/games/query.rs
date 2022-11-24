@@ -9,6 +9,7 @@ pub struct Query {
     pub country: Option<String>,
     pub competition: Option<String>,
     pub time: QueryTime,
+    pub display_order: DisplayOrder,
 }
 
 impl Query {
@@ -30,6 +31,12 @@ pub enum QueryTime {
     Upcoming,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum DisplayOrder {
+    CountryCompetition,
+    Time,
+}
+
 /// Sometimes people like to be lazy and not type too much. "epl" will always mean english premier
 /// league, "mls" major league soccer, "cl" champions league, ... Shortcuts are defined through
 /// this struct.
@@ -38,6 +45,7 @@ struct Shortcut {
     country: Option<String>,
     competition: Option<String>,
     replace_by: Vec<String>,
+    display_order: Option<DisplayOrder>,
 }
 
 /// Parse creates a Query based on a given piece of text. Requires its own struct so we can
@@ -56,42 +64,49 @@ impl Parser {
                 country: Some(String::from("England")),
                 competition: Some(String::from("Premier League")),
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)(?:la?)?liga$").unwrap(),
                 country: Some(String::from("Spain")),
                 competition: Some(String::from("LaLiga Santander")),
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)u?cl$").unwrap(),
                 country: Some(String::from("Champions League")),
                 competition: None,
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)u?el$").unwrap(),
                 country: Some(String::from("Europa League")),
                 competition: None,
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)ecl$").unwrap(),
                 country: Some(String::from("Europa Conference League")),
                 competition: None,
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)bundes(?:liga)?$").unwrap(),
                 country: Some(String::from("Germany")),
                 competition: Some(String::from("Bundesliga")),
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)serie[ -]?a$").unwrap(),
                 country: Some(String::from("Italy")),
                 competition: Some(String::from("Serie A")),
                 replace_by: vec![],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)mls$").unwrap(),
@@ -102,12 +117,14 @@ impl Parser {
                     String::from("League"),
                     String::from("Soccer"),
                 ],
+                display_order: None,
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)w(?:orld)?c(?:up)?$").unwrap(),
                 country: Some(String::from("World Cup 2022")),
                 competition: None,
                 replace_by: vec![],
+                display_order: Some(DisplayOrder::Time),
             },
         ];
         Self { shortcuts }
@@ -126,6 +143,7 @@ impl Parser {
         let mut parsing_country = false;
         let mut parsing_competition = false;
         let mut time = QueryTime::SlidingWindow;
+        let mut display_order = DisplayOrder::CountryCompetition;
         for part in msg_parts {
             if part.eq_ignore_ascii_case("--country") {
                 parsing_country = true;
@@ -151,6 +169,8 @@ impl Parser {
                 time = QueryTime::Finished;
             } else if part.eq_ignore_ascii_case("@upcoming") || part.eq_ignore_ascii_case("@soon") {
                 time = QueryTime::Upcoming;
+            } else if part.eq_ignore_ascii_case("@bytime") {
+                display_order = DisplayOrder::Time;
             } else if parsing_country {
                 let mut curr_country = country.expect("Should not be possible to be None");
                 if !curr_country.is_empty() {
@@ -177,6 +197,9 @@ impl Parser {
                         }
                         country = shortcut.country.clone();
                         competition = shortcut.competition.clone();
+                        if let Some(order) = shortcut.display_order.clone() {
+                            display_order = order;
+                        }
                         encountered_shortcut = true;
                         break;
                     }
@@ -191,6 +214,7 @@ impl Parser {
             country,
             competition,
             time,
+            display_order,
         }
     }
 }
@@ -205,7 +229,8 @@ mod tests {
             query: vec![String::from("anderlecht"), String::from("brugge")],
             country: None,
             competition: None,
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("anderlecht brugge");
@@ -218,7 +243,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("Belgium")),
             competition: None,
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("--country Belgium");
@@ -231,7 +257,8 @@ mod tests {
             query: vec![String::from("anderlecht"), String::from("brugge")],
             country: None,
             competition: None,
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("anderlecht    brugge");
@@ -244,7 +271,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("San Marino")),
             competition: None,
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("--country San Marino");
@@ -257,7 +285,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("Europa League")),
             competition: Some(String::from("Group K")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("--country Europa League --competition Group K");
@@ -270,7 +299,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("Europa League")),
             competition: Some(String::from("Group K")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("--competition Group K --country Europa League");
@@ -283,7 +313,8 @@ mod tests {
             query: vec![],
             country: None,
             competition: Some(String::from("Group K")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("--competition Group K");
@@ -296,7 +327,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("Europa League")),
             competition: Some(String::from("Group K")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("el --competition Group K");
@@ -309,7 +341,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("England")),
             competition: Some(String::from("Premier League")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("epl");
@@ -322,7 +355,8 @@ mod tests {
             query: vec![],
             country: Some(String::from("England")),
             competition: Some(String::from("Premier League")),
-            time: QueryTime::Today,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("EPL");
@@ -336,6 +370,7 @@ mod tests {
             country: Some(String::from("England")),
             competition: Some(String::from("Premier League")),
             time: QueryTime::Yesterday,
+            display_order: DisplayOrder::CountryCompetition,
         };
         let parser = Parser::new();
         let query = parser.from_message("@yday epl");
@@ -351,6 +386,7 @@ mod tests {
             country: Some(String::from("World Cup 2022")),
             competition: None,
             time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::Time,
         };
         let parser = Parser::new();
         let query = parser.from_message("wc");

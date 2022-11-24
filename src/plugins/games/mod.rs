@@ -90,7 +90,7 @@ impl super::AsyncMutableHandler for GamesHandler {
                 // !epl shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game --country England --competition Premier League")
             } else if message.eq_ignore_ascii_case("!wc") {
-                self.get_query("!game --country World Cup 2022")
+                self.get_query("!game --country World Cup 2022 @bytime")
             } else if message.eq_ignore_ascii_case("!genk") {
                 // !genk shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game genk")
@@ -126,6 +126,8 @@ impl super::AsyncMutableHandler for GamesHandler {
 
                 let result = if filtered.countries.is_empty() {
                     String::from("Your !games query returned no results.")
+                } else if query.display_order == query::DisplayOrder::Time {
+                    filtered.to_irc_ordered_by(toirc::DisplayOrder::Time)
                 } else {
                     filtered.to_irc()
                 };

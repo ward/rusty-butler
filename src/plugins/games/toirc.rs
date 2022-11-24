@@ -4,7 +4,7 @@ use chrono::prelude::*;
 /// This trait scratches that itch.
 pub trait ToIrc {
     fn to_irc(&self) -> String;
-    fn to_irc_ordered_by(&self, order: Order) -> String;
+    fn to_irc_ordered_by(&self, order: DisplayOrder) -> String;
 }
 
 impl ToIrc for football::Game {
@@ -52,55 +52,81 @@ impl ToIrc for football::Game {
         }
     }
 
-    fn to_irc_ordered_by(&self, order: Order) -> String {
+    fn to_irc_ordered_by(&self, _order: DisplayOrder) -> String {
         self.to_irc()
     }
 }
 
 impl ToIrc for football::Football {
     fn to_irc(&self) -> String {
-        let mut result = String::new();
-        let mut gamecounter = 0;
-        'countryloop: for country in &self.countries {
-            result.push('<');
-            result.push_str(&country.name);
-            result.push_str("> ");
-            for competition in &country.competitions {
-                result.push('[');
-                result.push_str(&competition.name);
-                result.push_str("] ");
-                for game in &competition.games {
-                    gamecounter += 1;
-                    // Max number of games to show. Circular dependency doesn't bother the compiler
-                    // apparently.
-                    if gamecounter > super::MAX_NUMBER_OF_GAMES {
-                        break 'countryloop;
-                    }
-                    result.push_str(&game.to_irc());
-                    result.push(' ');
-                }
-            }
-        }
-        result
+        self.to_irc_ordered_by(DisplayOrder::CountryCompetition)
     }
 
-    fn to_irc_ordered_by(&self, order: Order) -> String {
-        let mut result = String::new();
+    fn to_irc_ordered_by(&self, order: DisplayOrder) -> String {
         // Create tuples since a Game does not know its competition / country.
-        let all_games = self.countries.into_iter().map(|&country| {
-            country.competitions.into_iter().map(|&competition| {
-                competition
-                    .games
-                    .into_iter()
-                    .map(|&game| (country, competition, game))
+        // Once we have tuples, we can do sorting
+        let mut all_games: Vec<_> = self
+            .countries
+            .iter()
+            .map(|country| {
+                country
+                    .competitions
+                    .iter()
+                    .map(|competition| {
+                        competition.games.iter().map(|game| {
+                            (game, competition.name.to_string(), country.name.to_string())
+                        })
+                    })
+                    .flatten()
             })
-        });
+            .flatten()
+            .collect();
+
+        // TODO Does this handle the entire to_irc case? If so, remove the code duplication.
+        // Just gotta think about the max number of games to show.
+        match order {
+            DisplayOrder::CountryCompetition => {}
+            DisplayOrder::Time => {
+                // Relying on stable sort: all games within a country / competition are next to eachother
+                // by default. If you sort by time now, then they'd still be together if the same time.
+                all_games.sort_by(
+                    |(game_a, _competition_a, _country_a), (game_b, _competition_b, _country_b)| {
+                        game_a.start_time.partial_cmp(&game_b.start_time).unwrap()
+                    },
+                );
+            }
+        }
+
+        let mut result = String::new();
+        let mut previous_competition = String::new();
+        let mut previous_country = String::new();
+        let mut ctr = 0;
+        for (game, competition, country) in all_games {
+            if previous_country != country {
+                result.push('<');
+                result.push_str(&country);
+                result.push_str("> ");
+            }
+            if previous_competition != competition {
+                result.push('[');
+                result.push_str(&competition);
+                result.push_str("] ");
+            }
+            result.push_str(&game.to_irc());
+            result.push(' ');
+            previous_country = country;
+            previous_competition = competition;
+            ctr += 1;
+            if ctr > super::MAX_NUMBER_OF_GAMES {
+                break;
+            }
+        }
         result
     }
 }
 
 #[derive(Debug)]
-enum Order {
+pub enum DisplayOrder {
     CountryCompetition,
     Time,
 }
