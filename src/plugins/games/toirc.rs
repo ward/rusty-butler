@@ -4,6 +4,7 @@ use chrono::prelude::*;
 /// This trait scratches that itch.
 pub trait ToIrc {
     fn to_irc(&self) -> String;
+    fn to_irc_ordered_by(&self, order: Order) -> String;
 }
 
 impl ToIrc for football::Game {
@@ -50,6 +51,10 @@ impl ToIrc for football::Game {
             }
         }
     }
+
+    fn to_irc_ordered_by(&self, order: Order) -> String {
+        self.to_irc()
+    }
 }
 
 impl ToIrc for football::Football {
@@ -78,4 +83,24 @@ impl ToIrc for football::Football {
         }
         result
     }
+
+    fn to_irc_ordered_by(&self, order: Order) -> String {
+        let mut result = String::new();
+        // Create tuples since a Game does not know its competition / country.
+        let all_games = self.countries.into_iter().map(|&country| {
+            country.competitions.into_iter().map(|&competition| {
+                competition
+                    .games
+                    .into_iter()
+                    .map(|&game| (country, competition, game))
+            })
+        });
+        result
+    }
+}
+
+#[derive(Debug)]
+enum Order {
+    CountryCompetition,
+    Time,
 }
