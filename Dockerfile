@@ -2,7 +2,7 @@
 # docker build -t wardmuylaert/rusty-butler-builder .
 # docker run --rm -it -v $(pwd):/project wardmuylaert/rusty-butler-builder
 
-FROM debian:buster
+FROM debian:bullseye
 
 RUN apt-get update
 RUN apt-get install -y curl build-essential pkg-config libssl-dev
