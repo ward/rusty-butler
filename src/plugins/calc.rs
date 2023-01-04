@@ -9,6 +9,7 @@ pub struct CalcHandler {
     shortcuts: Vec<CalcShortcut>,
     feet_to_cm_matcher: Regex,
     cm_to_feet_matcher: Regex,
+    grade_matcher: Regex,
 }
 impl CalcHandler {
     pub fn new() -> CalcHandler {
@@ -51,11 +52,15 @@ impl CalcHandler {
         let cm_to_feet_matcher =
             Regex::new(r"^!(?:f(?:ee|oo)?t|in(?:ch|ches)?) +([0-9.]+) *(?:cm)?$").unwrap();
 
+        // !grade <distance> <elevation>
+        let grade_matcher = Regex::new(r"^(?i)!grade +(?P<distance>[0-9.]+) *(?P<distanceunit>[a-z]+)? +(?P<elevation>[0-9.]+) *(?P<elevationunit>[a-z]+)?$").unwrap();
+
         CalcHandler {
             ctx,
             shortcuts,
             feet_to_cm_matcher,
             cm_to_feet_matcher,
+            grade_matcher,
         }
     }
     fn match_calc(msg: &str) -> bool {
@@ -122,6 +127,77 @@ impl CalcHandler {
         }
     }
 
+    fn handle_grade(&mut self, msg: &str) -> Option<String> {
+        if let Some(captures) = self.grade_matcher.captures(msg) {
+            // Parsing input
+            let distance: Result<f64, _> = captures.name("distance").unwrap().as_str().parse();
+            let elevation: Result<f64, _> = captures.name("elevation").unwrap().as_str().parse();
+
+            if distance.is_err() || elevation.is_err() {
+                return None;
+            }
+
+            let distance = distance.unwrap();
+            let elevation = elevation.unwrap();
+
+            let distance_unit = if let Some(unit) = captures.name("distanceunit") {
+                let unit = unit.as_str();
+                match unit {
+                    "k" => "km",
+                    "mi" => "miles",
+                    "ft" => "feet",
+                    "m" => "meter",
+                    _ => unit,
+                }
+            } else {
+                "km"
+            };
+            let elevation_unit = if let Some(unit) = captures.name("elevationunit") {
+                let unit = unit.as_str();
+                match unit {
+                    "k" => "km",
+                    "mi" => "miles",
+                    "ft" => "feet",
+                    "m" => "meter",
+                    _ => unit,
+                }
+            } else {
+                "meter"
+            };
+
+            // Calculating grade
+            let to_grade = format!(
+                "{} {} per {} {}",
+                elevation, elevation_unit, distance, distance_unit
+            );
+            let to_mkm = format!(
+                "{} {} per {} {} to meter per kilometer",
+                elevation, elevation_unit, distance, distance_unit
+            );
+            let to_ftmi = format!(
+                "{} {} per {} {} to feet per mile",
+                elevation, elevation_unit, distance, distance_unit
+            );
+
+            return match (
+                self.eval(&to_grade),
+                self.eval(&to_mkm),
+                self.eval(&to_ftmi),
+            ) {
+                (Ok(grade), Ok(mkm), Ok(ftmi)) => {
+                    let result = format!("{} -- {} -- {}", grade, mkm, ftmi);
+                    Some(
+                        result
+                            .replace(" (dimensionless)", "")
+                            .replace("approx. ", ""),
+                    )
+                }
+                (_, _, _) => None,
+            };
+        }
+        None
+    }
+
     fn handle_feet_to_cm(&self, msg: &str) -> Option<String> {
         if let Some(captures) = self.feet_to_cm_matcher.captures(msg) {
             if let Some(feet) = captures.get(1) {
@@ -136,6 +212,7 @@ impl CalcHandler {
         }
         None
     }
+
     fn handle_cm_to_feet(&self, msg: &str) -> Option<String> {
         if let Some(captures) = self.cm_to_feet_matcher.captures(msg) {
             if let Some(cm) = captures.get(1) {
@@ -193,6 +270,9 @@ impl super::MutableHandler for CalcHandler {
             }
             if let Some(ref cm_to_feet) = self.handle_cm_to_feet(message) {
                 client.send_privmsg(&channel, cm_to_feet).unwrap();
+            }
+            if let Some(ref grade) = self.handle_grade(message) {
+                client.send_privmsg(&channel, grade).unwrap();
             }
         }
     }
@@ -380,5 +460,27 @@ mod tests {
             res,
             Some("5:00/km = 8:02/mile || 5:00/mile = 3:06/km".to_owned())
         );
+    }
+
+    #[test]
+    fn grade_calculation() {
+        let mut calc = CalcHandler::new();
+
+        let input_output = vec![
+            (
+                "!grade 10 130",
+                "0.013 -- 13 meter / kilometer -- 68.64 foot / mile",
+            ),
+            ("!grade 23.04 329", "0.01427951 -- 8225/576, 14.27951 meter / kilometer -- 3619/48, 75.39583 foot / mile"),
+            ("!grade 101 mile 96 feet", "0.0001800180 -- 0.1800180 meter / kilometer -- 96/101, 0.9504950 foot / mile"),
+            ("!grade 101 mi 96 ft", "0.0001800180 -- 0.1800180 meter / kilometer -- 96/101, 0.9504950 foot / mile"),
+            ("!grade 101mi 96ft", "0.0001800180 -- 0.1800180 meter / kilometer -- 96/101, 0.9504950 foot / mile"),
+            ("!grade 101 k 96ft", "0.0002897108 -- 0.2897108 meter / kilometer -- 1.529673 foot / mile"),
+        ];
+        for (input, output) in input_output {
+            println!("{}", input);
+            let res = calc.handle_grade(input);
+            assert_eq!(res, Some(output.to_owned()));
+        }
     }
 }
