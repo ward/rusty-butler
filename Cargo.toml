@@ -25,7 +25,7 @@ rink-core = "0.6"
 unicode-segmentation = "1.7"
 clap = "2.33"
 # TODO Check I need all these features
-tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.23", features = ["macros", "rt", "rt-multi-thread"] }
 # TODO What does this do exactly?
 futures = "0.3"
 football = { git = "https://github.com/ward/football" }
