@@ -55,3 +55,34 @@ Follow some best practices to keep the code clean:
     - Have the list be a configuration, not hardcoded
     - Have an --all or similar option when you _do_ want to look through
       everything
+
+## From Old Gitea Issues
+
+- Add weather via merrysky / its backend api
+- Match random strava club links? Not sure I really want that, giving the
+  leaderboard doesn't help anyone. Maybe just name / type / location / member
+  count. Does not occur often enough to matter though.
+- Consistent logging. Use the `log` (I think) crate everywhere instead of
+  `println`.
+- FIFA and Elo ranking for a country (see `!elo` club command)
+- Fantasy Premier League ranking.
+- Does it make sense to maybe use a lexer or whatever to analyse user input vs
+  adhoc regex?
+- Better error messages for `!calc`. Help with conversions / unit names would
+  be handy too.
+- Anti spam. See if the IRC library offers anything here. Maybe combine with
+  more streamlined parsing of the input. But would every plugin then need to
+  "register" its catches? Not sure how to best go about that.
+- If anti spam works, then see about making the bot reply in private messages.
+- Can this be easily turned into a bot for other platforms? Slack, Telegram,
+  WhatsApp, idk, something else to make it useful for me.
+- Recent IRC activity check for `!strava` command? Meaning if people don't talk
+  in the channel, then don't show them in the ranking. Combine `!seen`
+  information with the strava-ircnick connections we have.
+- Also enable showing last week's strava ranking. Useful the _x_ hours after
+  the clock changes.
+- Some games incorrectly show up as `@live` games in `!game`. Status: `Aband.`,
+  `AAW`, `AHW` (awarded home/away win). Hard to test those last two, the first
+  one might appear somewhat regularly.
+- Consider a `!strava me` (or `!strava someperson`) option that shows the stats
+  for a person and their ranking for each.
