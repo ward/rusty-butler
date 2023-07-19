@@ -126,6 +126,13 @@ impl Parser {
                 replace_by: vec![],
                 display_order: Some(DisplayOrder::Time),
             },
+            Shortcut {
+                regex: Regex::new(r"^(?i)w(?:omen'?s?)?-*w(?:orld)?-*c(?:up)?$").unwrap(),
+                country: Some(String::from("Women's World Cup")),
+                competition: None,
+                replace_by: vec![],
+                display_order: Some(DisplayOrder::Time),
+            },
         ];
         Self { shortcuts }
     }
@@ -390,6 +397,34 @@ mod tests {
         };
         let parser = Parser::new();
         let query = parser.from_message("wc");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_women_world_cup_shortcut() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Women's World Cup")),
+            competition: None,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::Time,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("wwc");
+        assert_eq!(desired, query);
+    }
+
+    #[test]
+    fn test_shortcut_with_dashes() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Women's World Cup")),
+            competition: None,
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::Time,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("women-world-cup");
         assert_eq!(desired, query);
     }
 }
