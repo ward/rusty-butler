@@ -69,7 +69,7 @@ impl Parser {
             Shortcut {
                 regex: Regex::new(r"^(?i)(?:la?)?liga$").unwrap(),
                 country: Some(String::from("Spain")),
-                competition: Some(String::from("LaLiga Santander")),
+                competition: Some(String::from("LaLiga")),
                 replace_by: vec![],
                 display_order: None,
             },
