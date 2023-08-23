@@ -111,12 +111,8 @@ impl Parser {
             Shortcut {
                 regex: Regex::new(r"^(?i)mls$").unwrap(),
                 country: Some(String::from("USA")),
-                competition: None,
-                replace_by: vec![
-                    String::from("Major"),
-                    String::from("League"),
-                    String::from("Soccer"),
-                ],
+                competition: Some(String::from("MLS")),
+                replace_by: vec![],
                 display_order: None,
             },
             Shortcut {
