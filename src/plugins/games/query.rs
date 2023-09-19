@@ -129,6 +129,16 @@ impl Parser {
                 replace_by: vec![],
                 display_order: Some(DisplayOrder::Time),
             },
+            Shortcut {
+                regex: Regex::new(r"^(?i)psg$").unwrap(),
+                country: None,
+                competition: None,
+                replace_by: vec![
+                    String::from("Paris"),
+                    String::from("Saint-Germain"),
+                ],
+                display_order: None,
+            },
         ];
         Self { shortcuts }
     }
