@@ -433,4 +433,23 @@ mod tests {
         let query = parser.from_message("women-world-cup");
         assert_eq!(desired, query);
     }
+
+    #[test]
+    fn test_serie_a() {
+        let desired = Query {
+            query: vec![],
+            country: Some(String::from("Italy")),
+            competition: Some(String::from("Serie A")),
+            time: QueryTime::SlidingWindow,
+            display_order: DisplayOrder::CountryCompetition,
+        };
+        let parser = Parser::new();
+        let query = parser.from_message("seriea");
+        assert_eq!(desired, query);
+        let query = parser.from_message("serie-a");
+        assert_eq!(desired, query);
+        // Due to tokenization of the search string, this does not currently work.
+        // let query = parser.from_message("serie a");
+        // assert_eq!(desired, query);
+    }
 }
