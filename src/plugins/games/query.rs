@@ -102,7 +102,7 @@ impl Parser {
                 display_order: None,
             },
             Shortcut {
-                regex: Regex::new(r"^(?i)serie[ -]?a$").unwrap(),
+                regex: Regex::new(r"^(?i)serie[- ]?a$").unwrap(),
                 country: Some(String::from("Italy")),
                 competition: Some(String::from("Serie A")),
                 replace_by: vec![],
