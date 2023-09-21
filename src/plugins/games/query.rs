@@ -135,7 +135,8 @@ impl Parser {
                 competition: None,
                 replace_by: vec![
                     String::from("Paris"),
-                    String::from("Saint-Germain"),
+                    String::from("Saint"),
+                    String::from("Germain"),
                 ],
                 display_order: None,
             },
