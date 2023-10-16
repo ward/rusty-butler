@@ -116,6 +116,13 @@ impl Parser {
                 display_order: None,
             },
             Shortcut {
+                regex: Regex::new(r"^(?i)nwsl$").unwrap(),
+                country: Some(String::from("USA")),
+                competition: Some(String::from("National Women's Soccer League")),
+                replace_by: vec![],
+                display_order: None,
+            },
+            Shortcut {
                 regex: Regex::new(r"^(?i)w(?:orld)?c(?:up)?$").unwrap(),
                 country: Some(String::from("World Cup 2022")),
                 competition: None,
