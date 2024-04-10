@@ -94,6 +94,9 @@ impl super::AsyncMutableHandler for GamesHandler {
             } else if message.eq_ignore_ascii_case("!genk") {
                 // !genk shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game genk")
+            } else if message.eq_ignore_ascii_case("!cl") {
+                // !cl shortshortcut (in future replace this with an alias plugin)
+                self.get_query("!game --country Champions League")
             } else {
                 // Otherwise check for regular !game query
                 self.get_query(message)
