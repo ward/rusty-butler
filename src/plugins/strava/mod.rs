@@ -1,6 +1,7 @@
 use super::formatting;
 use async_trait::async_trait;
 use irc::client::prelude::*;
+use reqwest::cookie::Jar;
 use std::error;
 use std::fmt;
 use std::str::FromStr;
@@ -10,12 +11,18 @@ mod strava_irc_link;
 
 pub struct StravaHandler {
     irc_links: strava_irc_link::StravaIrcLink,
+    cookies: Vec<String>,
 }
 
 impl StravaHandler {
-    pub fn new(_config: &Config) -> StravaHandler {
+    pub fn new(config: &super::config::Config) -> StravaHandler {
         let irc_links = strava_irc_link::StravaIrcLink::from_file_or_new("irc_links.json");
-        StravaHandler { irc_links }
+        let cookies = if let Some(c) = &config.strava {
+            c.cookies.split("; ").map(|s| s.to_owned()).collect()
+        } else {
+            vec![]
+        };
+        StravaHandler { irc_links, cookies }
     }
 
     fn match_club(msg: &str) -> bool {
@@ -30,7 +37,7 @@ impl StravaHandler {
         println!("Handling club");
         let club_id = "223460"; // Libera ##running (TODO: make this plugin config)
 
-        let leaderboard = ClubLeaderboard::fetch(club_id).await;
+        let leaderboard = ClubLeaderboard::fetch(club_id, &self.cookies).await;
         match leaderboard {
             Ok(mut leaderboard) => {
                 match input.parse() {
@@ -94,15 +101,24 @@ struct ClubLeaderboard {
 }
 
 impl ClubLeaderboard {
-    async fn fetch(id: &str) -> Result<ClubLeaderboard, reqwest::Error> {
+    async fn fetch(
+        id: &str,
+        cookies: &Vec<String>,
+    ) -> Result<ClubLeaderboard, reqwest::Error> {
         let url = format!("https://www.strava.com/clubs/{}/leaderboard", id);
-        // More involved than the others because we need to change headers
-        let client = reqwest::Client::new();
+        let strava_domain: reqwest::Url = "https://strava.com".parse().unwrap();
+        let jar = Jar::default();
+        for cookie in cookies {
+            let cookie = format!("{}; Domain=.strava.com; Path=/;", cookie);
+            jar.add_cookie_str(&cookie, &strava_domain);
+        }
+        let client = reqwest::ClientBuilder::new()
+            .cookie_provider(jar.into())
+            .build()?;
         let req = client.get(&url)
             .header("Accept", "text/javascript, application/javascript, application/ecmascript, application/x-ecmascript")
             .header("X-Requested-With", "XmlHttpRequest")
             .send().await?;
-        println!("{}", req.url());
         req.json().await
     }
 
@@ -338,4 +354,23 @@ mod tests {
             "🏆 1. \u{2}w\u{200d}ard\u{f} 10k 0h50 5:00/k ↑100m 1.0%"
         );
     }
+
+    #[test]
+    fn parse_leaderboard() {
+        let input = include_str!("strava_leaderboard.json");
+        let leaderboard: ClubLeaderboard = serde_json::from_str(input).unwrap();
+        assert_eq!(leaderboard.ranking[0].strava_id, 2521741);
+    }
+
+    // #[tokio::test]
+    // async fn fetch_libera_club() {
+    //     let _ = env_logger::builder().is_test(true).try_init();
+
+    //     let club_id = "223460";
+    //     // Fill in your info
+    //     let cookies = "";
+    //     let cookies = cookies.split("; ").map(|s| s.to_owned()).collect();
+    //     let club = ClubLeaderboard::fetch(club_id, &cookies).await.unwrap();
+    //     println!("{:#?}", club);
+    // }
 }

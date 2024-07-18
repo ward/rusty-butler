@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&elo_handler);
     let ranking_handler = plugins::leagueranking::LeagueRankingHandler::new();
     help_handler.add_help(&ranking_handler);
-    let strava_handler = plugins::strava::StravaHandler::new(&config_for_handlers);
+    let strava_handler = plugins::strava::StravaHandler::new(&plugin_config);
     help_handler.add_help(&strava_handler);
     let untappd_handler = plugins::untappd::UntappdHandler::new(&config_for_handlers);
     help_handler.add_help(&untappd_handler);

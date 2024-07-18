@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub struct Config {
     pub league_ranking: LeagueRankingConfig,
     pub simple_reply: SimpleReplyConfig,
+    pub strava: Option<StravaConfig>,
 }
 
 impl Config {
@@ -43,6 +44,11 @@ pub struct LeagueRankingConfig {
 pub struct LeagueConfig {
     pub alias: Vec<String>,
     pub url: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct StravaConfig {
+    pub cookies: String,
 }
 
 // #[derive(Deserialize, Debug)]
