@@ -18,8 +18,8 @@ impl ToIrc for football::Game {
                 away = self.away_team
             ),
             football::GameStatus::Upcoming => {
-                let now = Utc::today();
-                if self.start_time.date().ordinal() == now.ordinal() {
+                let now = Utc::now().date_naive();
+                if self.start_time.date_naive().ordinal() == now.ordinal() {
                     format!(
                         "({}) {} - {}",
                         self.start_time.format("%H:%M"),
