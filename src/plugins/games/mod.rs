@@ -86,16 +86,14 @@ impl GamesHandler {
 impl super::AsyncMutableHandler for GamesHandler {
     async fn handle(&mut self, client: &Client, msg: &Message) {
         if let Command::PRIVMSG(ref channel, ref message) = msg.command {
+            // TODO: Replace these "shortshortcuts" with a proper alias plugin
             let query = if message.eq_ignore_ascii_case("!epl") {
-                // !epl shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game --country England --competition Premier League")
             } else if message.eq_ignore_ascii_case("!wc") {
                 self.get_query("!game --country World Cup 2022 @bytime")
             } else if message.eq_ignore_ascii_case("!genk") {
-                // !genk shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game genk")
             } else if message.eq_ignore_ascii_case("!cl") {
-                // !cl shortshortcut (in future replace this with an alias plugin)
                 self.get_query("!game --country Champions League")
             } else {
                 // Otherwise check for regular !game query

@@ -48,6 +48,8 @@ Follow some best practices to keep the code clean:
 # To Do/Ideas
 
 - Basic query parsing should probably be centralised, always the same idea.
+- Related to that, an alias plugin sounds useful (see also the growing mess in
+  games shortshortcut parsing)
 - `plugins.toml` should let you decide which plugins to enable.
 - Need to filter out a bunch of lesser competitions that nobody cares about.
     - Have an include and exclude list
