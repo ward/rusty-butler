@@ -451,14 +451,13 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "football"
 version = "0.2.0"
-source = "git+https://github.com/ward/football#0045311dc990c3ddd27bd83fff9df52491070c63"
+source = "git+https://github.com/ward/football#def432a7036f0eeec63749921559dce7f136ad2f"
 dependencies = [
  "bitap",
  "chrono",
  "fuzzy-matcher",
  "log",
  "reqwest",
- "scraper",
  "serde",
  "serde_json",
 ]
