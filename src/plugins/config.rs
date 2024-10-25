@@ -5,6 +5,7 @@ pub struct Config {
     pub league_ranking: LeagueRankingConfig,
     pub simple_reply: SimpleReplyConfig,
     pub strava: Option<StravaConfig>,
+    pub alias: Option<HashMap<String, String>>,
 }
 
 impl Config {

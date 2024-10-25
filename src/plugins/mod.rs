@@ -51,6 +51,8 @@ fn send_privmsg(client: &irc::client::Client, target: &str, message: &str) {
     }
 }
 
+pub mod alias;
+
 pub mod config;
 
 pub mod simple_reply;
