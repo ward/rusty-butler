@@ -90,7 +90,7 @@ impl super::AsyncMutableHandler for GamesHandler {
             let query = if message.eq_ignore_ascii_case("!epl") {
                 self.get_query("!game --country England --competition Premier League")
             } else if message.eq_ignore_ascii_case("!wc") {
-                self.get_query("!game --country World Cup 2022 @bytime")
+                self.get_query("!game --country World Cup 2026 @bytime")
             } else if message.eq_ignore_ascii_case("!genk") {
                 self.get_query("!game genk")
             } else if message.eq_ignore_ascii_case("!cl") {
