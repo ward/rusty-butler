@@ -2,10 +2,10 @@
 # docker build -t wardmuylaert/rusty-butler-builder .
 # docker run --rm -it -v $(pwd):/project wardmuylaert/rusty-butler-builder
 
-FROM debian:bullseye
+FROM debian:trixie
 
 RUN apt-get update
-RUN apt-get install -y curl build-essential pkg-config libssl-dev
+RUN apt-get install -y curl build-essential pkg-config libssl-dev libsqlite3-dev
 
 # This is not very reproducible as it just gets the latest rustup and latest rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
