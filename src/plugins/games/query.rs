@@ -404,7 +404,7 @@ mod tests {
     fn test_world_cup_shortcut() {
         let desired = Query {
             query: vec![],
-            country: Some(String::from("World Cup 2022")),
+            country: Some(String::from("World Cup 2026")),
             competition: None,
             time: QueryTime::SlidingWindow,
             display_order: DisplayOrder::Time,

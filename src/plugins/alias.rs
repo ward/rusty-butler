@@ -73,7 +73,7 @@ mod tests {
                 replies: HashMap::new(),
             },
             strava: None,
-            alias,
+            alias: Some(alias),
         };
 
         let plug = AliasPlugin::new(&config);
