@@ -124,7 +124,7 @@ impl Parser {
             },
             Shortcut {
                 regex: Regex::new(r"^(?i)w(?:orld)?c(?:up)?$").unwrap(),
-                country: Some(String::from("World Cup 2022")),
+                country: Some(String::from("World Cup 2026")),
                 competition: None,
                 replace_by: vec![],
                 display_order: Some(DisplayOrder::Time),

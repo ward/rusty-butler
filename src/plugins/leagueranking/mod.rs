@@ -220,6 +220,7 @@ impl Default for LeagueRankingHandler {
     }
 }
 
+#[cfg(test)]
 mod tests {
     #[test]
     fn test_group_name_converter() {
