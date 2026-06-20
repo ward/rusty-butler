@@ -85,12 +85,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     help_handler.add_help(&untappd_handler);
     let games_handler = plugins::games::GamesHandler::new().await;
     help_handler.add_help(&games_handler);
+    let third_place_handler = plugins::thirdplace::ThirdPlaceHandler::new().await;
+    help_handler.add_help(&third_place_handler);
     let async_mutable_handlers: Vec<Mutex<Box<dyn AsyncMutableHandler>>> = vec![
         Mutex::new(Box::new(elo_handler)),
         Mutex::new(Box::new(ranking_handler)),
         Mutex::new(Box::new(strava_handler)),
         Mutex::new(Box::new(untappd_handler)),
         Mutex::new(Box::new(games_handler)),
+        Mutex::new(Box::new(third_place_handler)),
     ];
 
     // Could not move help_handler before

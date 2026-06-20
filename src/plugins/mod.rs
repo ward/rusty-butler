@@ -75,6 +75,8 @@ pub mod untappd;
 
 pub mod leagueranking;
 
+pub mod thirdplace;
+
 pub mod help;
 
 pub mod formatting {
