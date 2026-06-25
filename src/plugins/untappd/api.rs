@@ -17,21 +17,28 @@ pub async fn search(query: &str, client_id: &str, client_secret: &str) -> Vec<Be
         .header(reqwest::header::USER_AGENT, USER_AGENT);
     // TODO Keep track of failure information to pass it to the user
     match req.send().await {
-        Ok(resp) => match resp.json::<UntappdApiReply>().await {
-            Ok(untappd_search) => match untappd_search.response {
-                Some(response) => response.beers.items,
-                None => {
-                    eprintln!("Received error from Untappd API: {:?}", untappd_search);
+        Ok(resp) => match resp.text().await {
+            Ok(untappd_str) => match serde_json::from_str::<UntappdApiReply>(&untappd_str) {
+                Ok(untappd_search) => match untappd_search.response {
+                    Some(response) => response.beers.items,
+                    None => {
+                        eprintln!("Received error from Untappd API: {:?}", untappd_search);
+                        vec![]
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error parsing json: {}", e);
+                    eprintln!("Response: {}", untappd_str);
                     vec![]
                 }
             },
             Err(e) => {
-                eprintln!("{}", e);
+                eprintln!("Failed to get text from Untappd Response: {}", e);
                 vec![]
             }
         },
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("Error fetching from Untappd: {}", e);
             vec![]
         }
     }
